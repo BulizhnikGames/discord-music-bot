@@ -19,8 +19,9 @@ import (
 )
 
 type Youtube struct {
-	serv    *youtube.Service
-	timeOut time.Duration
+	serv        *youtube.Service
+	searchLimit int
+	timeOut     time.Duration
 }
 
 // getClient uses a Context and Config to retrieve a Token
@@ -95,7 +96,7 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func NewService() *Youtube {
+func NewService(searchLimit int) *Youtube {
 	ctx := context.Background()
 	secret, err := ioutil.ReadFile("secret.json")
 	if err != nil {
@@ -116,7 +117,8 @@ func NewService() *Youtube {
 	}
 
 	return &Youtube{
-		serv:    serv,
-		timeOut: 5 * time.Second,
+		serv:        serv,
+		searchLimit: searchLimit,
+		timeOut:     5 * time.Second,
 	}
 }

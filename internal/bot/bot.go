@@ -3,10 +3,12 @@ package bot
 import (
 	"context"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
+	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube/api"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-faster/errors"
 	"log"
+	"os"
 	"sync"
 )
 
@@ -15,7 +17,7 @@ type InteractionFunc func(bot *DiscordBot, interaction *discordgo.InteractionCre
 type VoiceEntity struct {
 	VoiceConnection *discordgo.VoiceConnection
 	Queue           chan string
-	Ctx             context.Context
+	Skip            context.CancelFunc
 	Stop            context.CancelFunc
 }
 
@@ -26,7 +28,7 @@ type DiscordBot struct {
 	VoiceEntities internal.AsyncMap[string, *VoiceEntity]
 }
 
-func Init(BotToken, AppID string) *DiscordBot {
+func Init(BotToken, AppID string, searchLimit int) *DiscordBot {
 	session, err := discordgo.New("Bot " + BotToken)
 	if err != nil {
 		log.Fatalf("Error creating Discord session: %s", err)
@@ -57,6 +59,11 @@ func Init(BotToken, AppID string) *DiscordBot {
 			Description: "clear playback queue",
 			Type:        discordgo.ChatApplicationCommand,
 		},
+		{
+			Name:        "stop",
+			Description: "stop playback and clear queue",
+			Type:        discordgo.ChatApplicationCommand,
+		},
 	})
 	if err != nil {
 		log.Fatalf("Error initializing application's slash interactions: %s", err)
@@ -64,7 +71,7 @@ func Init(BotToken, AppID string) *DiscordBot {
 
 	bot := &DiscordBot{
 		Session:      session,
-		Youtube:      api.NewService(),
+		Youtube:      api.NewService(searchLimit),
 		Interactions: make(map[string]InteractionFunc),
 		VoiceEntities: internal.AsyncMap[string, *VoiceEntity]{
 			Data:  make(map[string]*VoiceEntity, 200),
@@ -128,4 +135,6 @@ func (bot *DiscordBot) Stop() {
 	}
 	bot.VoiceEntities.Mutex.Unlock()
 	bot.Session.Close()
+	os.RemoveAll(config.Storage)
+	os.Mkdir(config.Storage, 0777)
 }

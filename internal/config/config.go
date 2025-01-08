@@ -4,11 +4,17 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
+	"strconv"
 )
 
+const LINK_PREFIX = "https://www.youtube.com/watch?v="
+
+var Storage string
+
 type Config struct {
-	BotToken string
-	AppID    string
+	BotToken    string
+	AppID       string
+	SearchLimit int
 }
 
 func LoadConfig() Config {
@@ -27,6 +33,19 @@ func LoadConfig() Config {
 	cfg.AppID = os.Getenv("APP_ID")
 	if cfg.AppID == "" {
 		log.Fatal("App ID not found")
+	}
+
+	cfg.SearchLimit, err = strconv.Atoi(os.Getenv("SEARCH_LIMIT"))
+	if err != nil {
+		log.Fatalf("Incorrect search limit: %s", err)
+	}
+
+	Storage = os.Getenv("STORAGE")
+	if Storage == "" {
+		log.Fatal("Storage not found")
+	}
+	if Storage[len(Storage)-1] != '/' {
+		Storage = Storage + "/"
 	}
 
 	return cfg

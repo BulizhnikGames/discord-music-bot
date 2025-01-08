@@ -12,11 +12,12 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	discordBot := bot.Init(cfg.BotToken, cfg.AppID)
+	discordBot := bot.Init(cfg.BotToken, cfg.AppID, cfg.SearchLimit)
 
 	discordBot.RegisterCommand("play", interactions.PlayInteraction)
 	discordBot.RegisterCommand("leave", interactions.LeaveInteraction)
 	discordBot.RegisterCommand("clear", interactions.ClearInteraction)
+	discordBot.RegisterCommand("stop", interactions.StopInteraction)
 
 	go discordBot.Run()
 

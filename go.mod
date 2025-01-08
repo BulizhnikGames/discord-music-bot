@@ -3,6 +3,10 @@ module github.com/BulizhnikGames/discord-music-bot
 go 1.23.2
 
 require (
+	github.com/bwmarrin/discordgo v0.28.1
+	github.com/go-faster/errors v0.7.1
+	github.com/jogramming/dca v0.0.0-20210930103944-155f5e5f0cc7
+	github.com/joho/godotenv v1.5.1
 	golang.org/x/oauth2 v0.25.0
 	google.golang.org/api v0.214.0
 )
@@ -11,9 +15,7 @@ require (
 	cloud.google.com/go/auth v0.13.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.6 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
-	github.com/bwmarrin/discordgo v0.28.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
@@ -21,7 +23,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
 	go.opentelemetry.io/otel v1.29.0 // indirect
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
@@ -34,3 +36,5 @@ require (
 	google.golang.org/grpc v1.67.1 // indirect
 	google.golang.org/protobuf v1.35.2 // indirect
 )
+
+replace github.com/jogramming/dca => github.com/BulizhnikGames/dca v0.0.0-20250108150538-09eb612a051b
