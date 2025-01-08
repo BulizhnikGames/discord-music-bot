@@ -2,12 +2,14 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/go-faster/errors"
 	"github.com/jogramming/dca"
 	"io"
 	"log"
+	"math/rand/v2"
 	"time"
 )
 
@@ -30,6 +32,26 @@ func (bot *DiscordBot) LeaveVoiceChat(guildID string) error {
 	}
 }
 
+func (bot *DiscordBot) ShuffleQueue(guildID string) error {
+	bot.VoiceEntities.Mutex.RLock()
+	defer bot.VoiceEntities.Mutex.RUnlock()
+	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok && len(voiceChat.Queue) > 0 {
+		queueCopy := make([]string, 0, len(voiceChat.Queue))
+		for len(voiceChat.Queue) > 0 {
+			queueCopy = append(queueCopy, <-voiceChat.Queue)
+		}
+		rand.Shuffle(len(queueCopy), func(i, j int) {
+			queueCopy[i], queueCopy[j] = queueCopy[j], queueCopy[i]
+		})
+		for _, song := range queueCopy {
+			voiceChat.Queue <- song
+		}
+		return nil
+	} else {
+		return errors.New("bot isn't in the voice chat")
+	}
+}
+
 func (bot *DiscordBot) ClearQueue(guildID string) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
@@ -39,6 +61,36 @@ func (bot *DiscordBot) ClearQueue(guildID string) error {
 		}
 		for len(voiceChat.Queue) > 0 {
 			<-voiceChat.Queue
+		}
+		return nil
+	} else {
+		return errors.New("bot isn't in the voice chat")
+	}
+}
+
+func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
+	bot.VoiceEntities.Mutex.RLock()
+	defer bot.VoiceEntities.Mutex.RUnlock()
+	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
+		n := len(voiceChat.Queue)
+		res := make([]string, 0, n)
+		for i := 0; i < n; i++ {
+			song := <-voiceChat.Queue
+			res = append(res, song)
+			voiceChat.Queue <- song
+		}
+		return res, nil
+	} else {
+		return nil, errors.New("bot isn't in the voice chat")
+	}
+}
+
+func (bot *DiscordBot) SkipSong(guildID string) error {
+	bot.VoiceEntities.Mutex.RLock()
+	defer bot.VoiceEntities.Mutex.RUnlock()
+	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
+		if voiceChat.Skip != nil {
+			voiceChat.Skip()
 		}
 		return nil
 	} else {
@@ -66,7 +118,19 @@ func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 			downloaded, err := youtube.Download(song)
 			if err != nil {
 				log.Printf("Error downloading song: %v", err)
-				return
+				continue
+			}
+			message := fmt.Sprintf(
+				":arrow_forward: playing song: `%s | %d:%02d` by `%s`",
+				downloaded.Title,
+				downloaded.Duration/60,
+				downloaded.Duration%60,
+				downloaded.Author,
+			)
+			err = bot.SendInChannel(voiceChat.TextChannel, message)
+			if err != nil {
+				log.Printf("Couldn't send message about song: %v", err)
+				continue
 			}
 			log.Printf("Playing song %s", song)
 			err = voiceChat.playSong(ctx, downloaded)
@@ -92,13 +156,15 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 	options.Bitrate = 96
 	options.RawOutput = true
 
+	log.Printf("%+v", song)
+
 	encodeSession, err := dca.EncodeFile(song.FilePath, options)
 	if err != nil {
 		return errors.Errorf("Failed to create encoding session for %s: %v", song.FilePath, err)
 	}
 	defer encodeSession.Cleanup()
 
-	time.Sleep(500 * time.Millisecond)
+	//time.Sleep(500 * time.Millisecond)
 
 	playContext, cancel := context.WithCancel(ctx)
 	voiceChat.Skip = cancel

@@ -29,7 +29,7 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 		return errors.Wrap(err, "User is not in voice chat")
 	}
 
-	queue, err := bot.JoinVoiceChat(interaction.GuildID, channelID)
+	queue, err := bot.JoinVoiceChat(interaction.GuildID, channelID, interaction.ChannelID)
 	if err != nil {
 		return err
 	}

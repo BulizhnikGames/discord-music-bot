@@ -24,7 +24,10 @@ func Download(query string) (*internal.Song, error) {
 		}
 		args := []string{
 			firstArg,
+			"-N", "8",
 			"--extract-audio",
+			"--buffer-size", "65536",
+			"--retries", "1",
 			"--audio-format", "opus",
 			"--no-playlist",
 			"--match-filter", fmt.Sprintf("duration < %d & !is_live", 20*60),

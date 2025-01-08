@@ -9,6 +9,12 @@ import (
 	"os/signal"
 )
 
+// TODO: errors
+// TODO: messages formating
+// TODO: middleware
+// TODO: now playing
+// TODO: playback optimization
+
 func main() {
 	cfg := config.LoadConfig()
 
@@ -18,6 +24,9 @@ func main() {
 	discordBot.RegisterCommand("leave", interactions.LeaveInteraction)
 	discordBot.RegisterCommand("clear", interactions.ClearInteraction)
 	discordBot.RegisterCommand("stop", interactions.StopInteraction)
+	discordBot.RegisterCommand("skip", interactions.SkipInteraction)
+	discordBot.RegisterCommand("shuffle", interactions.ShuffleInteraction)
+	discordBot.RegisterCommand("queue", interactions.QueueInteraction)
 
 	go discordBot.Run()
 

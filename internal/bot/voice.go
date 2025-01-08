@@ -9,10 +9,10 @@ import (
 // If bot is already in voice chat:
 // 1. Returns error if he's in other voice chat
 // 2. Returns queue if he's in requested voice chat
-func (bot *DiscordBot) JoinVoiceChat(guildID string, channelID string) (chan string, error) {
+func (bot *DiscordBot) JoinVoiceChat(guildID, voiceChannel, textChannel string) (chan string, error) {
 	bot.VoiceEntities.Mutex.RLock()
 	if v, ok := bot.VoiceEntities.Data[guildID]; ok {
-		if v.VoiceConnection.ChannelID == channelID {
+		if v.VoiceConnection.ChannelID == voiceChannel {
 			bot.VoiceEntities.Mutex.RUnlock()
 			return v.Queue, nil
 		} else {
@@ -23,9 +23,9 @@ func (bot *DiscordBot) JoinVoiceChat(guildID string, channelID string) (chan str
 	}
 	bot.VoiceEntities.Mutex.RUnlock()
 
-	voiceData, err := bot.Session.ChannelVoiceJoin(guildID, channelID, false, true)
+	voiceData, err := bot.Session.ChannelVoiceJoin(guildID, voiceChannel, false, true)
 	if err != nil {
-		err = errors.Errorf("could not join VoiceConnection chat (id: %s, guild: %s): %v", channelID, guildID, err)
+		err = errors.Errorf("could not join VoiceConnection chat (id: %s, guild: %s): %v", voiceChannel, guildID, err)
 		return nil, errors.Wrap(err, "Couldn't join voice chat")
 	}
 
@@ -33,6 +33,7 @@ func (bot *DiscordBot) JoinVoiceChat(guildID string, channelID string) (chan str
 	voiceChat := &VoiceEntity{
 		VoiceConnection: voiceData,
 		Queue:           queue,
+		TextChannel:     textChannel,
 	}
 	var ctx context.Context
 	ctx, voiceChat.Stop = context.WithCancel(context.Background())

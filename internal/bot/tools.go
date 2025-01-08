@@ -28,3 +28,8 @@ func (bot *DiscordBot) StopPlayback(guildID string) error {
 		return errors.Errorf("bot doesn't have active playback in guild %s", guildID)
 	}
 }
+
+func (bot *DiscordBot) SendInChannel(channelID, message string) error {
+	_, err := bot.Session.ChannelMessageSend(channelID, message)
+	return err
+}

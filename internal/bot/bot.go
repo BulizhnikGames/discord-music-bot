@@ -17,6 +17,7 @@ type InteractionFunc func(bot *DiscordBot, interaction *discordgo.InteractionCre
 type VoiceEntity struct {
 	VoiceConnection *discordgo.VoiceConnection
 	Queue           chan string
+	TextChannel     string
 	Skip            context.CancelFunc
 	Stop            context.CancelFunc
 }
@@ -62,6 +63,21 @@ func Init(BotToken, AppID string, searchLimit int) *DiscordBot {
 		{
 			Name:        "stop",
 			Description: "stop playback and clear queue",
+			Type:        discordgo.ChatApplicationCommand,
+		},
+		{
+			Name:        "skip",
+			Description: "skip current song",
+			Type:        discordgo.ChatApplicationCommand,
+		},
+		{
+			Name:        "shuffle",
+			Description: "shuffle queue",
+			Type:        discordgo.ChatApplicationCommand,
+		},
+		{
+			Name:        "queue",
+			Description: "get songs in queue",
 			Type:        discordgo.ChatApplicationCommand,
 		},
 	})
