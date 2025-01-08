@@ -7,6 +7,7 @@ import (
 	"github.com/go-faster/errors"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
@@ -22,14 +23,15 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 		}
 		maxLength := 0
 		for i, song := range queue {
-			maxLength = max(maxLength, len(song)+len(strconv.Itoa(i))+1)
+			maxLength = max(maxLength, utf8.RuneCountInString(song)+utf8.RuneCountInString(strconv.Itoa(i))+3)
 		}
 		message := strings.Builder{}
 		message.WriteString(":musical_note: playback queue :musical_note:")
 		message.WriteString("\n`")
 		for i, song := range queue {
 			message.WriteString(fmt.Sprintf("%d. %s", i+1, song))
-			for j := 0; j < maxLength-(len(song)+len(strconv.Itoa(i))+1); j++ {
+			diff := maxLength - (utf8.RuneCountInString(song) + utf8.RuneCountInString(strconv.Itoa(i)) + 2)
+			for j := 0; j < diff; j++ {
 				message.WriteRune(' ')
 			}
 			if i != len(queue)-1 {

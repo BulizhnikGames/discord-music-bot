@@ -152,5 +152,5 @@ func (bot *DiscordBot) Stop() {
 	bot.VoiceEntities.Mutex.Unlock()
 	bot.Session.Close()
 	os.RemoveAll(config.Storage)
-	os.Mkdir(config.Storage, 0777)
+	//os.Mkdir(config.Storage, 0777)
 }

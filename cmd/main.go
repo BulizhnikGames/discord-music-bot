@@ -14,6 +14,7 @@ import (
 // TODO: middleware
 // TODO: now playing
 // TODO: playback optimization
+// TODO: caching songs and storing them just while bot needs them
 
 func main() {
 	cfg := config.LoadConfig()
