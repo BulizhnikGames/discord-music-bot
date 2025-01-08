@@ -1,4 +1,4 @@
 .env
 secret.json
 .idea
-./storage
+storage
