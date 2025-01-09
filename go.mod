@@ -37,4 +37,4 @@ require (
 	google.golang.org/protobuf v1.35.2 // indirect
 )
 
-replace github.com/jogramming/dca => github.com/BulizhnikGames/dca v1.1.0
+replace github.com/jogramming/dca => github.com/BulizhnikGames/dca v1.3.0

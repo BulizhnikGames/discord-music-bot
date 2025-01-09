@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
+	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/go-faster/errors"
 	"github.com/jogramming/dca"
 	"io"
@@ -67,6 +68,7 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 	options.BufferedFrames = 100
 	options.FrameDuration = 20
 	//options.CompressionLevel = 5
+	options.Path = config.Utils
 	options.Bitrate = 96
 	options.RawOutput = true
 
@@ -84,18 +86,23 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 	voiceChat.skip = func() {
 		voiceChat.nowPlaying = nil
 		cancel()
-		if voiceChat.loop == 0 {
-			voiceChat.cache.Mutex.Lock()
-			defer voiceChat.cache.Mutex.Unlock()
-			if cache, ok := voiceChat.cache.Data[song.Query]; ok {
-				cache.Cnt--
-				if cache.Cnt == 0 {
-					encodeSession.Cleanup()
-					cache.Delete()
-					delete(voiceChat.cache.Data, song.Query)
-				}
+		if voiceChat.loop == 2 {
+			return
+		}
+		voiceChat.cache.Mutex.Lock()
+		defer voiceChat.cache.Mutex.Unlock()
+		cache, ok := voiceChat.cache.Data[song.Query]
+		if ok {
+			cache.Cnt--
+			if voiceChat.loop == 0 && cache.Cnt <= 0 {
+				encodeSession.Cleanup()
+				cache.Delete()
+				delete(voiceChat.cache.Data, song.Query)
 			}
-		} else if voiceChat.loop == 1 {
+		}
+		if voiceChat.loop == 1 {
+			// maybe consider this variant
+			//voiceChat.Queue.Write(song)
 			voiceChat.InsertQueue(song.Query)
 		}
 	}

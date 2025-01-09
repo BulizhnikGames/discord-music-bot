@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/bwmarrin/discordgo"
@@ -37,7 +38,7 @@ func (bot *DiscordBot) SendInChannel(channelID, message string) error {
 	return err
 }
 
-func (voiceChat *VoiceEntity) downloadSong(song *internal.Song) *internal.Song {
+func (voiceChat *VoiceEntity) downloadSong(ctx context.Context, song *internal.Song) *internal.Song {
 	voiceChat.cache.Mutex.Lock()
 	defer voiceChat.cache.Mutex.Unlock()
 	if cache, ok := voiceChat.cache.Data[song.Query]; ok {
@@ -46,9 +47,12 @@ func (voiceChat *VoiceEntity) downloadSong(song *internal.Song) *internal.Song {
 		return cache.Song
 	} else {
 		log.Printf("Downloading song: %s", song.Query)
-		downloaded, err := youtube.Download(song.Query)
+		downloaded, err := youtube.Download(ctx, voiceChat.voiceConnection.GuildID, song.Query)
 		if err != nil {
 			log.Printf("Couldn't download song: %v", err)
+			return &internal.Song{
+				Query: song.Query,
+			}
 		}
 		log.Printf("Downloaded song: %v", downloaded.Title)
 		cache = &internal.SongCache{

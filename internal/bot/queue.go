@@ -3,7 +3,9 @@ package bot
 import (
 	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
+	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/go-faster/errors"
+	"os"
 )
 
 func (voiceChat *VoiceEntity) InsertQueue(query string) {
@@ -45,9 +47,14 @@ func (bot *DiscordBot) ClearQueue(guildID string) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
+		save := voiceChat.loop
+		voiceChat.loop = 0
+		voiceChat.skip()
+		voiceChat.loop = save
 		voiceChat.Queue.Clear()
 		voiceChat.cache.Mutex.Lock()
 		defer voiceChat.cache.Mutex.Unlock()
+		os.Remove(config.Storage + guildID)
 		clear(voiceChat.cache.Data)
 		return nil
 	} else {
@@ -59,8 +66,20 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
+		if voiceChat.loop == 2 {
+			if voiceChat.nowPlaying == nil {
+				return []string{}, nil
+			}
+			return []string{fmt.Sprintf(
+				"%s | %d:%02d by %s",
+				voiceChat.nowPlaying.Title,
+				voiceChat.nowPlaying.Duration/60,
+				voiceChat.nowPlaying.Duration%60,
+				voiceChat.nowPlaying.Author,
+			)}, nil
+		}
 		songs := voiceChat.Queue.Get()
-		res := make([]string, 0, len(songs))
+		res := make([]string, 0, len(songs)+1)
 		for _, song := range songs {
 			var add string
 			if song.Title != "" {
@@ -75,6 +94,18 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 				add = song.Query
 			}
 			res = append(res, add)
+		}
+		if voiceChat.loop == 1 && voiceChat.nowPlaying != nil {
+			res = append(
+				res,
+				fmt.Sprintf(
+					"%s | %d:%02d by %s",
+					voiceChat.nowPlaying.Title,
+					voiceChat.nowPlaying.Duration/60,
+					voiceChat.nowPlaying.Duration%60,
+					voiceChat.nowPlaying.Author,
+				),
+			)
 		}
 		return res, nil
 	} else {

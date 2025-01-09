@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"log"
 	"math/rand/v2"
 	"os"
@@ -52,10 +53,13 @@ type CycleQueue[T any] struct {
 	mutex             *sync.RWMutex
 	handled           AsyncMap[*T, bool]
 	pos               AsyncMap[*T, int]
-	WriteHandler      func(val *T) *T
+	ctx               context.Context
+	WriteHandler      func(ctx context.Context, val *T) *T
+	stopHandlers      context.CancelFunc
 }
 
 func CreateCycleQueue[T any](size int) *CycleQueue[T] {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &CycleQueue[T]{
 		buffer: make([]*T, size),
 		mutex:  &sync.RWMutex{},
@@ -67,14 +71,16 @@ func CreateCycleQueue[T any](size int) *CycleQueue[T] {
 			Data:  make(map[*T]int),
 			Mutex: &sync.RWMutex{},
 		},
+		ctx:          ctx,
+		stopHandlers: cancel,
 	}
 }
 
-func (queue *CycleQueue[T]) SetHandler(handler func(val *T) *T) {
+func (queue *CycleQueue[T]) SetHandler(handler func(ctx context.Context, val *T) *T) {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	queue.WriteHandler = handler
-	log.Printf("Setted handler: %v", handler)
+	//log.Printf("Setted handler: %v", handler)
 }
 
 func (queue *CycleQueue[T]) Len() int {
@@ -105,7 +111,7 @@ func (queue *CycleQueue[T]) Write(v *T) {
 	if queue.WriteHandler != nil {
 		//log.Printf("handle")
 		go func() {
-			processed := queue.WriteHandler(v)
+			processed := queue.WriteHandler(queue.ctx, v)
 			queue.mutex.Lock()
 			queue.handled.Mutex.Lock()
 			queue.pos.Mutex.Lock()
@@ -153,8 +159,10 @@ func (queue *CycleQueue[T]) Clear() {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	clear(queue.buffer)
+	queue.stopHandlers()
 	queue.readIdx = 0
 	queue.writeIdx = 0
+	queue.ctx, queue.stopHandlers = context.WithCancel(context.Background())
 }
 
 func (queue *CycleQueue[T]) Get() []T {

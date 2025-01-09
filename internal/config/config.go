@@ -10,6 +10,7 @@ import (
 const LINK_PREFIX = "https://www.youtube.com/watch?v="
 
 var Storage string
+var Utils string
 
 type Config struct {
 	BotToken    string
@@ -46,6 +47,14 @@ func LoadConfig() Config {
 	}
 	if Storage[len(Storage)-1] != '/' {
 		Storage = Storage + "/"
+	}
+
+	Utils = os.Getenv("UTILS_PATH")
+	if Utils == "" {
+		log.Fatal("Utils not found")
+	}
+	if Utils[len(Utils)-1] != '/' {
+		Utils = Utils + "/"
 	}
 
 	return cfg

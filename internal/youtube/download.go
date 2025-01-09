@@ -1,62 +1,72 @@
 package youtube
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/go-faster/errors"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 )
 
-func Download(query string) (*internal.Song, error) {
+func Download(ctx context.Context, guildID, query string) (*internal.Song, error) {
 	start := time.Now()
-	youtubeDownloader, err := exec.LookPath("yt-dlp")
-	if err != nil {
-		return nil, errors.New("yt-dlp not found in path")
+	firstArg := query
+	if !strings.HasPrefix(query, config.LINK_PREFIX) {
+		firstArg = fmt.Sprintf("ytsearch10:%s", strings.ReplaceAll(query, "\"", ""))
+	}
+	args := []string{
+		firstArg,
+		"-N", "8",
+		"--extract-audio",
+		"--buffer-size", "65536",
+		"--retries", "1",
+		"--audio-format", "opus",
+		"--no-playlist",
+		"--match-filter", fmt.Sprintf("duration < %d & !is_live", 20*60),
+		"--max-downloads", "1",
+		"--output", fmt.Sprintf("%s%s/%d-%%(id)s.opus", config.Storage, guildID, start.Unix()),
+		"--quiet",
+		"--print-json",
+		"--ignore-errors", // Ignores unavailable videos
+		"--no-color",
+		"--no-check-formats",
+	}
+	log.Printf("yt-dlp %s", strings.Join(args, " "))
+	var commandPath string
+	if config.Utils == "" {
+		commandPath = "yt-dlp"
 	} else {
-		firstArg := query
-		if !strings.HasPrefix(query, config.LINK_PREFIX) {
-			firstArg = fmt.Sprintf("ytsearch10:%s", strings.ReplaceAll(query, "\"", ""))
+		commandPath = config.Utils + "yt-dlp.exe"
+	}
+	cmd := exec.Command(commandPath, args...)
+	if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
+		return nil, errors.Errorf("failed to search and download audio: %v: %s", err)
+	} else {
+		videoMetadata := internal.VideoMetadata{}
+		err = json.Unmarshal(data, &videoMetadata)
+		if err != nil {
+			return nil, errors.Errorf("failed to unmarshal video metadata: %v", err)
 		}
-		args := []string{
-			firstArg,
-			"-N", "8",
-			"--extract-audio",
-			"--buffer-size", "65536",
-			"--retries", "1",
-			"--audio-format", "opus",
-			"--no-playlist",
-			"--match-filter", fmt.Sprintf("duration < %d & !is_live", 20*60),
-			"--max-downloads", "1",
-			"--output", fmt.Sprintf("./storage/%d-%%(id)s.opus", start.Unix()),
-			"--quiet",
-			"--print-json",
-			"--ignore-errors", // Ignores unavailable videos
-			"--no-color",
-			"--no-check-formats",
-		}
-		log.Printf("yt-dlp %s", strings.Join(args, " "))
-		cmd := exec.Command(youtubeDownloader, args...)
-		if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
-			return nil, errors.Errorf("failed to search and download audio: %v", err)
-		} else {
-			videoMetadata := internal.VideoMetadata{}
-			err = json.Unmarshal(data, &videoMetadata)
-			if err != nil {
-				return nil, errors.Errorf("failed to unmarshal video metadata: %v", err)
-			}
-			dotIdx := strings.LastIndex(videoMetadata.Filename, ".")
-			slashIdx := strings.LastIndex(videoMetadata.Filename, `\`)
+		//dotIdx := strings.LastIndex(videoMetadata.Filename, ".")
+		//slashIdx := strings.LastIndex(videoMetadata.Filename, `\`)
+		path := fmt.Sprintf("%s%s/%d-%s.opus", config.Storage, guildID, start.Unix(), videoMetadata.ID)
+		select {
+		case <-ctx.Done():
+			os.Remove(path)
+			return nil, ctx.Err()
+		default:
 			return &internal.Song{
 				Title:    videoMetadata.Title,
 				Author:   videoMetadata.Uploader,
 				URL:      videoMetadata.URL,
 				Query:    query,
-				FilePath: config.Storage + videoMetadata.Filename[slashIdx+1:dotIdx] + `.opus`,
+				FilePath: path,
 				Duration: videoMetadata.Duration,
 			}, nil
 		}

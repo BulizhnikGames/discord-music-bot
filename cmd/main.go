@@ -11,12 +11,16 @@ import (
 
 // TODO: errors
 // TODO: messages formating
-// TODO: middleware
-// TODO: pause and resume
+
 // TODO: dj role
 // TODO: select text channel
-// TODO: fix queue command when playback is looped
-// TODO: fix cache when playback is looped
+
+// TODO: middleware
+// TODO: pause and resume
+// TODO: batch download of songs
+
+// TODO: playlist support
+// TODO: improve usage of YT API
 
 func main() {
 	cfg := config.LoadConfig()

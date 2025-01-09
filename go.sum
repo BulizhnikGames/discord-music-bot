@@ -10,6 +10,10 @@ github.com/BulizhnikGames/dca v0.0.0-20250108151932-c547f91884d3 h1:HZB25lgGfDTE
 github.com/BulizhnikGames/dca v0.0.0-20250108151932-c547f91884d3/go.mod h1:wEKrH0nwhatjUfKhYCD5q7sW+jMI65gweE4c2ci01uw=
 github.com/BulizhnikGames/dca v1.1.0 h1:YQRytF8vvmFQY1F3EZxBzUGgkTnaW+eypzM9/vIAzZ0=
 github.com/BulizhnikGames/dca v1.1.0/go.mod h1:gaoZm2RdBRZI5DHu8UZ4M8N1DM/VHI19M/mL7TX5UJ4=
+github.com/BulizhnikGames/dca v1.2.0 h1:kEg/f4DokEqi+noJEyGcJelssHRtaTtRRHIKw8McKCw=
+github.com/BulizhnikGames/dca v1.2.0/go.mod h1:gaoZm2RdBRZI5DHu8UZ4M8N1DM/VHI19M/mL7TX5UJ4=
+github.com/BulizhnikGames/dca v1.3.0 h1:axt5rmmLSM+nnP2BcV7kArYF6SrSIidgXs94TbwpRXM=
+github.com/BulizhnikGames/dca v1.3.0/go.mod h1:gaoZm2RdBRZI5DHu8UZ4M8N1DM/VHI19M/mL7TX5UJ4=
 github.com/bwmarrin/discordgo v0.28.1 h1:gXsuo2GBO7NbR6uqmrrBDplPUx2T3nzu775q/Rd1aG4=
 github.com/bwmarrin/discordgo v0.28.1/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
