@@ -55,6 +55,7 @@ func Download(query string) (*internal.Song, error) {
 				Title:    videoMetadata.Title,
 				Author:   videoMetadata.Uploader,
 				URL:      videoMetadata.URL,
+				Query:    query,
 				FilePath: config.Storage + videoMetadata.Filename[slashIdx+1:dotIdx] + `.opus`,
 				Duration: videoMetadata.Duration,
 			}, nil

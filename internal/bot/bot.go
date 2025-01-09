@@ -15,11 +15,14 @@ import (
 type InteractionFunc func(bot *DiscordBot, interaction *discordgo.InteractionCreate) error
 
 type VoiceEntity struct {
-	VoiceConnection *discordgo.VoiceConnection
-	Queue           chan string
-	TextChannel     string
-	Skip            context.CancelFunc
-	Stop            context.CancelFunc
+	voiceConnection *discordgo.VoiceConnection
+	Queue           *internal.CycleQueue[internal.Song]
+	nowPlaying      *internal.Song
+	cache           internal.AsyncMap[string, *internal.SongCache] // key is user's query for song
+	loop            int                                            // 0 - no loop, 1 - queue loop, 2 - single loop
+	textChannel     string
+	skip            context.CancelFunc
+	stop            context.CancelFunc
 }
 
 type DiscordBot struct {
@@ -79,6 +82,24 @@ func Init(BotToken, AppID string, searchLimit int) *DiscordBot {
 			Name:        "queue",
 			Description: "get songs in queue",
 			Type:        discordgo.ChatApplicationCommand,
+		},
+		{
+			Name:        "nowplaying",
+			Description: "get current song",
+			Type:        discordgo.ChatApplicationCommand,
+		},
+		{
+			Name:        "loop",
+			Description: "0 - no loop, 1 - loop queue, 2 - loop current song",
+			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "arg",
+					Description: "loop command argument",
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Required:    true,
+				},
+			},
 		},
 	})
 	if err != nil {
@@ -141,11 +162,11 @@ func (bot *DiscordBot) Run() {
 func (bot *DiscordBot) Stop() {
 	bot.VoiceEntities.Mutex.Lock()
 	for _, voice := range bot.VoiceEntities.Data {
-		err := voice.VoiceConnection.Disconnect()
+		err := voice.voiceConnection.Disconnect()
 		if err != nil {
 			log.Printf("Couldn't disconnect from voice chat (id: %s, guild: %s)",
-				voice.VoiceConnection.ChannelID,
-				voice.VoiceConnection.GuildID,
+				voice.voiceConnection.ChannelID,
+				voice.voiceConnection.GuildID,
 			)
 		}
 	}

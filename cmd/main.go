@@ -12,9 +12,11 @@ import (
 // TODO: errors
 // TODO: messages formating
 // TODO: middleware
-// TODO: now playing
-// TODO: playback optimization
-// TODO: caching songs and storing them just while bot needs them
+// TODO: pause and resume
+// TODO: dj role
+// TODO: select text channel
+// TODO: fix queue command when playback is looped
+// TODO: fix cache when playback is looped
 
 func main() {
 	cfg := config.LoadConfig()
@@ -28,6 +30,8 @@ func main() {
 	discordBot.RegisterCommand("skip", interactions.SkipInteraction)
 	discordBot.RegisterCommand("shuffle", interactions.ShuffleInteraction)
 	discordBot.RegisterCommand("queue", interactions.QueueInteraction)
+	discordBot.RegisterCommand("nowplaying", interactions.NowPlayingInteraction)
+	discordBot.RegisterCommand("loop", interactions.LoopInteraction)
 
 	go discordBot.Run()
 

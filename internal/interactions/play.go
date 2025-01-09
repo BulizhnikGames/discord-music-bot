@@ -29,11 +29,11 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 		return errors.Wrap(err, "User is not in voice chat")
 	}
 
-	queue, err := bot.JoinVoiceChat(interaction.GuildID, channelID, interaction.ChannelID)
+	voiceChat, err := bot.JoinVoiceChat(interaction.GuildID, channelID, interaction.ChannelID)
 	if err != nil {
 		return err
 	}
-	queue <- song
+	voiceChat.InsertQueue(song)
 
 	responseToInteraction(bot, interaction, fmt.Sprintf("Added to queue: %s", song), discordgo.MessageFlagsEphemeral)
 
@@ -79,7 +79,7 @@ func autoComplete(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate)
 		},
 	})
 	if err != nil {
-		return errors.Errorf("error trying to send autocomplete options to user: %s", err)
+		return errors.Errorf("couldn't send autocomplete options (%v) to user: %s", choices, err)
 	}
 
 	return nil

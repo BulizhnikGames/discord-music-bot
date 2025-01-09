@@ -1,6 +1,9 @@
 package internal
 
 import (
+	"log"
+	"math/rand/v2"
+	"os"
 	"sync"
 )
 
@@ -8,8 +11,22 @@ type Song struct {
 	Title    string
 	Author   string
 	URL      string
+	Query    string
 	FilePath string
 	Duration int
+}
+
+func (song *Song) Delete() {
+	log.Printf("Delete song %s", song.Title)
+	err := os.Remove(song.FilePath)
+	if err != nil {
+		log.Printf("Delete song file error: %s\n", err)
+	}
+}
+
+type SongCache struct {
+	Cnt int
+	*Song
 }
 
 type AsyncMap[K comparable, V any] struct {
@@ -27,6 +44,153 @@ func (m *AsyncMap[K, V]) Remove(k K) {
 	m.Mutex.Lock()
 	defer m.Mutex.Unlock()
 	delete(m.Data, k)
+}
+
+type CycleQueue[T any] struct {
+	readIdx, writeIdx int
+	buffer            []*T
+	mutex             *sync.RWMutex
+	handled           AsyncMap[*T, bool]
+	pos               AsyncMap[*T, int]
+	WriteHandler      func(val *T) *T
+}
+
+func CreateCycleQueue[T any](size int) *CycleQueue[T] {
+	return &CycleQueue[T]{
+		buffer: make([]*T, size),
+		mutex:  &sync.RWMutex{},
+		handled: AsyncMap[*T, bool]{
+			Data:  make(map[*T]bool),
+			Mutex: &sync.RWMutex{},
+		},
+		pos: AsyncMap[*T, int]{
+			Data:  make(map[*T]int),
+			Mutex: &sync.RWMutex{},
+		},
+	}
+}
+
+func (queue *CycleQueue[T]) SetHandler(handler func(val *T) *T) {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	queue.WriteHandler = handler
+	log.Printf("Setted handler: %v", handler)
+}
+
+func (queue *CycleQueue[T]) Len() int {
+	queue.mutex.RLock()
+	defer queue.mutex.RUnlock()
+	return (queue.writeIdx - queue.readIdx + len(queue.buffer)) % len(queue.buffer)
+}
+
+func (queue *CycleQueue[T]) Cap() int {
+	return len(queue.buffer)
+}
+
+func (queue *CycleQueue[T]) Write(v *T) {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	if queue.buffer == nil || queue.buffer[queue.writeIdx] != nil {
+		return
+	}
+	//log.Printf("write")
+	//writtenAt := queue.writeIdx
+	queue.pos.Mutex.Lock()
+	defer queue.pos.Mutex.Unlock()
+	queue.pos.Data[v] = queue.writeIdx
+	queue.buffer[queue.writeIdx] = v
+	queue.writeIdx = (queue.writeIdx + 1) % len(queue.buffer)
+	//log.Printf("written")
+	//log.Printf("handler: %v", queue.WriteHandler)
+	if queue.WriteHandler != nil {
+		//log.Printf("handle")
+		go func() {
+			processed := queue.WriteHandler(v)
+			queue.mutex.Lock()
+			queue.handled.Mutex.Lock()
+			queue.pos.Mutex.Lock()
+			defer queue.mutex.Unlock()
+			defer queue.handled.Mutex.Unlock()
+			defer queue.pos.Mutex.Unlock()
+			queue.buffer[queue.pos.Data[v]] = processed
+			queue.pos.Data[processed] = queue.pos.Data[v]
+			delete(queue.pos.Data, v)
+			queue.handled.Data[processed] = true
+		}()
+	}
+}
+
+func (queue *CycleQueue[T]) Read() *T {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	if queue.buffer == nil || queue.buffer[queue.readIdx] == nil {
+		return nil
+	}
+	v := queue.buffer[queue.readIdx]
+	queue.buffer[queue.readIdx] = nil
+	queue.readIdx = (queue.readIdx + 1) % len(queue.buffer)
+	return v
+}
+
+func (queue *CycleQueue[T]) ReadHandled() *T {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	if queue.buffer == nil || queue.buffer[queue.readIdx] == nil {
+		return nil
+	}
+	v := queue.buffer[queue.readIdx]
+	queue.handled.Mutex.RLock()
+	defer queue.handled.Mutex.RUnlock()
+	if handled, ok := queue.handled.Data[v]; !ok || !handled {
+		return nil
+	}
+	queue.buffer[queue.readIdx] = nil
+	queue.readIdx = (queue.readIdx + 1) % len(queue.buffer)
+	return v
+}
+
+func (queue *CycleQueue[T]) Clear() {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	clear(queue.buffer)
+	queue.readIdx = 0
+	queue.writeIdx = 0
+}
+
+func (queue *CycleQueue[T]) Get() []T {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	res := make([]T, 0, (queue.writeIdx-queue.readIdx+len(queue.buffer))%len(queue.buffer))
+	save := queue.readIdx
+	for queue.buffer[queue.readIdx] != nil {
+		res = append(res, *queue.buffer[queue.readIdx])
+		queue.readIdx = (queue.readIdx + 1) % len(queue.buffer)
+	}
+	queue.readIdx = save
+	return res
+}
+
+func (queue *CycleQueue[T]) Shuffle() {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	vals := make([]*T, 0, (queue.writeIdx-queue.readIdx+len(queue.buffer))%len(queue.buffer))
+	save := queue.readIdx
+	for queue.buffer[queue.readIdx] != nil {
+		vals = append(vals, queue.buffer[queue.readIdx])
+		queue.readIdx = (queue.readIdx + 1) % len(queue.buffer)
+	}
+	queue.readIdx = save
+	rand.Shuffle(len(vals), func(i, j int) {
+		vals[i], vals[j] = vals[j], vals[i]
+	})
+	queue.writeIdx = (queue.writeIdx - len(vals) + len(queue.buffer)) % len(queue.buffer)
+	for _, val := range vals {
+		queue.pos.Mutex.Lock()
+		queue.pos.Data[val] = queue.writeIdx
+		queue.buffer[queue.writeIdx] = val
+		queue.writeIdx = (queue.writeIdx + 1) % len(queue.buffer)
+		queue.pos.Mutex.Unlock()
+	}
 }
 
 type VideoMetadata struct {

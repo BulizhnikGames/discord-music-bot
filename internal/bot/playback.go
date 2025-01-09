@@ -4,108 +4,23 @@ import (
 	"context"
 	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
-	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/go-faster/errors"
 	"github.com/jogramming/dca"
 	"io"
 	"log"
-	"math/rand/v2"
 	"time"
 )
 
 const PLAYBACK_TIMEOUT = 30 * time.Minute
 
-func (bot *DiscordBot) LeaveVoiceChat(guildID string) error {
-	bot.VoiceEntities.Mutex.Lock()
-	defer bot.VoiceEntities.Mutex.Unlock()
-	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		voiceChat.Stop()
-		close(voiceChat.Queue)
-		err := voiceChat.VoiceConnection.Disconnect()
-		if err != nil {
-			return err
-		}
-		delete(bot.VoiceEntities.Data, guildID)
-		return nil
-	} else {
-		return errors.New("bot isn't in the voice chat")
-	}
-}
-
-func (bot *DiscordBot) ShuffleQueue(guildID string) error {
-	bot.VoiceEntities.Mutex.RLock()
-	defer bot.VoiceEntities.Mutex.RUnlock()
-	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok && len(voiceChat.Queue) > 0 {
-		queueCopy := make([]string, 0, len(voiceChat.Queue))
-		for len(voiceChat.Queue) > 0 {
-			queueCopy = append(queueCopy, <-voiceChat.Queue)
-		}
-		rand.Shuffle(len(queueCopy), func(i, j int) {
-			queueCopy[i], queueCopy[j] = queueCopy[j], queueCopy[i]
-		})
-		for _, song := range queueCopy {
-			voiceChat.Queue <- song
-		}
-		return nil
-	} else {
-		return errors.New("bot isn't in the voice chat")
-	}
-}
-
-func (bot *DiscordBot) ClearQueue(guildID string) error {
-	bot.VoiceEntities.Mutex.RLock()
-	defer bot.VoiceEntities.Mutex.RUnlock()
-	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		if voiceChat.Skip != nil {
-			voiceChat.Skip()
-		}
-		for len(voiceChat.Queue) > 0 {
-			<-voiceChat.Queue
-		}
-		return nil
-	} else {
-		return errors.New("bot isn't in the voice chat")
-	}
-}
-
-func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
-	bot.VoiceEntities.Mutex.RLock()
-	defer bot.VoiceEntities.Mutex.RUnlock()
-	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		n := len(voiceChat.Queue)
-		res := make([]string, 0, n)
-		for i := 0; i < n; i++ {
-			song := <-voiceChat.Queue
-			res = append(res, song)
-			voiceChat.Queue <- song
-		}
-		return res, nil
-	} else {
-		return nil, errors.New("bot isn't in the voice chat")
-	}
-}
-
-func (bot *DiscordBot) SkipSong(guildID string) error {
-	bot.VoiceEntities.Mutex.RLock()
-	defer bot.VoiceEntities.Mutex.RUnlock()
-	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		if voiceChat.Skip != nil {
-			voiceChat.Skip()
-		}
-		return nil
-	} else {
-		return errors.New("bot isn't in the voice chat")
-	}
-}
-
 func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 	defer func() {
-		err := bot.LeaveVoiceChat(voiceChat.VoiceConnection.GuildID)
+		err := bot.LeaveVoiceChat(voiceChat.voiceConnection.GuildID)
 		if err != nil {
 			log.Printf(
 				"Couldn't leave voice chat (id: %s, guild: %s): %v",
-				voiceChat.VoiceConnection.ChannelID,
-				voiceChat.VoiceConnection.GuildID,
+				voiceChat.voiceConnection.ChannelID,
+				voiceChat.voiceConnection.GuildID,
 				err,
 			)
 		}
@@ -114,36 +29,35 @@ func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 	timeout := time.NewTimer(PLAYBACK_TIMEOUT).C
 	for {
 		select {
-		case song := <-voiceChat.Queue:
-			downloaded, err := youtube.Download(song)
-			if err != nil {
-				log.Printf("Error downloading song: %v", err)
+		case <-timeout:
+			log.Printf("Playback timeout (channel: %s, guild: %s)", voiceChat.voiceConnection.GuildID, voiceChat.voiceConnection.GuildID)
+			return
+		case <-ctx.Done():
+			log.Printf("stop signal (channel: %s, guild: %s)", voiceChat.voiceConnection.GuildID, voiceChat.voiceConnection.GuildID)
+			return
+		default:
+			song := voiceChat.Queue.ReadHandled()
+			if song == nil {
 				continue
 			}
 			message := fmt.Sprintf(
 				":arrow_forward: playing song: `%s | %d:%02d` by `%s`",
-				downloaded.Title,
-				downloaded.Duration/60,
-				downloaded.Duration%60,
-				downloaded.Author,
+				song.Title,
+				song.Duration/60,
+				song.Duration%60,
+				song.Author,
 			)
-			err = bot.SendInChannel(voiceChat.TextChannel, message)
+			err := bot.SendInChannel(voiceChat.textChannel, message)
 			if err != nil {
 				log.Printf("Couldn't send message about song: %v", err)
 				continue
 			}
-			log.Printf("Playing song %s", song)
-			err = voiceChat.playSong(ctx, downloaded)
+			log.Printf("Playing song %s", song.Title)
+			err = voiceChat.playSong(ctx, song)
 			if err != nil {
 				log.Printf("Error playing song: %v", err)
 			}
 			timeout = time.NewTimer(PLAYBACK_TIMEOUT).C
-		case <-timeout:
-			log.Printf("Playback timeout (channel: %s, guild: %s)", voiceChat.VoiceConnection.GuildID, voiceChat.VoiceConnection.GuildID)
-			return
-		case <-ctx.Done():
-			log.Printf("Stop signal (channel: %s, guild: %s)", voiceChat.VoiceConnection.GuildID, voiceChat.VoiceConnection.GuildID)
-			return
 		}
 	}
 }
@@ -156,7 +70,7 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 	options.Bitrate = 96
 	options.RawOutput = true
 
-	log.Printf("%+v", song)
+	//log.Printf("%+v", song)
 
 	encodeSession, err := dca.EncodeFile(song.FilePath, options)
 	if err != nil {
@@ -167,22 +81,46 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 	//time.Sleep(500 * time.Millisecond)
 
 	playContext, cancel := context.WithCancel(ctx)
-	voiceChat.Skip = cancel
+	voiceChat.skip = func() {
+		voiceChat.nowPlaying = nil
+		cancel()
+		if voiceChat.loop == 0 {
+			voiceChat.cache.Mutex.Lock()
+			defer voiceChat.cache.Mutex.Unlock()
+			if cache, ok := voiceChat.cache.Data[song.Query]; ok {
+				cache.Cnt--
+				if cache.Cnt == 0 {
+					encodeSession.Cleanup()
+					cache.Delete()
+					delete(voiceChat.cache.Data, song.Query)
+				}
+			}
+		} else if voiceChat.loop == 1 {
+			voiceChat.InsertQueue(song.Query)
+		}
+	}
 
 	done := make(chan error)
-	dca.NewStream(encodeSession, voiceChat.VoiceConnection, done)
+	voiceChat.nowPlaying = song
+	dca.NewStream(encodeSession, voiceChat.voiceConnection, done)
 	select {
 	case err = <-done:
 		if err != nil && err != io.EOF {
-			log.Printf("error while streaming: %v", err)
+			log.Printf("error while streaming (song %s): %v", song.Title, err)
 		}
 	case <-playContext.Done():
-		log.Printf("Skipped")
-		voiceChat.Skip = nil
+		log.Printf("Skipped %s", song.Title)
+		if voiceChat.loop == 2 {
+			encodeSession.Cleanup()
+			return voiceChat.playSong(ctx, song)
+		}
 		return nil
 	}
-	voiceChat.Skip = nil
-	log.Printf("End of song")
-	//log.Printf("%s", encodeSession.FFMPEGMessages())
+	voiceChat.skip()
+	log.Printf("End of song %s", song.Title)
+	if voiceChat.loop == 2 {
+		encodeSession.Cleanup()
+		return voiceChat.playSong(ctx, song)
+	}
 	return nil
 }
