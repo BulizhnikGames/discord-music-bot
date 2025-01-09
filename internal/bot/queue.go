@@ -47,10 +47,12 @@ func (bot *DiscordBot) ClearQueue(guildID string) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		save := voiceChat.loop
-		voiceChat.loop = 0
-		voiceChat.skip()
-		voiceChat.loop = save
+		if voiceChat.skip != nil {
+			save := voiceChat.loop
+			voiceChat.loop = 0
+			voiceChat.skip()
+			voiceChat.loop = save
+		}
 		voiceChat.Queue.Clear()
 		voiceChat.cache.Mutex.Lock()
 		defer voiceChat.cache.Mutex.Unlock()

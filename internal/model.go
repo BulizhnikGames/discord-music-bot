@@ -54,7 +54,7 @@ type CycleQueue[T any] struct {
 	handled           AsyncMap[*T, bool]
 	pos               AsyncMap[*T, int]
 	ctx               context.Context
-	WriteHandler      func(ctx context.Context, val *T) *T
+	WriteHandler      func(ctx context.Context, val *T) (*T, error)
 	stopHandlers      context.CancelFunc
 }
 
@@ -76,7 +76,7 @@ func CreateCycleQueue[T any](size int) *CycleQueue[T] {
 	}
 }
 
-func (queue *CycleQueue[T]) SetHandler(handler func(ctx context.Context, val *T) *T) {
+func (queue *CycleQueue[T]) SetHandler(handler func(ctx context.Context, val *T) (*T, error)) {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	queue.WriteHandler = handler
@@ -111,7 +111,10 @@ func (queue *CycleQueue[T]) Write(v *T) {
 	if queue.WriteHandler != nil {
 		//log.Printf("handle")
 		go func() {
-			processed := queue.WriteHandler(queue.ctx, v)
+			processed, err := queue.WriteHandler(queue.ctx, v)
+			if err != nil {
+				log.Printf("couldn't handle new element: %v", err)
+			}
 			queue.mutex.Lock()
 			queue.handled.Mutex.Lock()
 			queue.pos.Mutex.Lock()

@@ -53,7 +53,7 @@ func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 				log.Printf("Couldn't send message about song: %v", err)
 				continue
 			}
-			log.Printf("Playing song %s", song.Title)
+			log.Printf("Playing song %s (query %s)", song.Title, song.Query)
 			err = voiceChat.playSong(ctx, song)
 			if err != nil {
 				log.Printf("Error playing song: %v", err)
