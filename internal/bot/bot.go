@@ -13,15 +13,15 @@ import (
 )
 
 type InteractionFunc func(bot *DiscordBot, interaction *discordgo.InteractionCreate) error
+type InteractionMiddleware func(next InteractionFunc, arg any) InteractionFunc
 
 type VoiceEntity struct {
 	voiceConnection *discordgo.VoiceConnection
 	Queue           *internal.CycleQueue[internal.Song]
-	nowPlaying      *internal.Song
+	nowPlaying      *internal.PlayingSong
 	cache           internal.AsyncMap[string, *internal.SongCache] // key is user's query for song
 	loop            int                                            // 0 - no loop, 1 - queue loop, 2 - single loop
 	textChannel     string
-	skip            context.CancelFunc
 	stop            context.CancelFunc
 }
 
@@ -94,12 +94,23 @@ func Init(BotToken, AppID string, searchLimit int) *DiscordBot {
 			Type:        discordgo.ChatApplicationCommand,
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Name:        "arg",
-					Description: "loop command argument",
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Required:    true,
+					Name:         "arg",
+					Description:  "loop command argument",
+					Type:         discordgo.ApplicationCommandOptionInteger,
+					Required:     true,
+					Autocomplete: true,
 				},
 			},
+		},
+		{
+			Name:        "pause",
+			Description: "pause playback",
+			Type:        discordgo.ChatApplicationCommand,
+		},
+		{
+			Name:        "resume",
+			Description: "resume playback",
+			Type:        discordgo.ChatApplicationCommand,
 		},
 	})
 	if err != nil {

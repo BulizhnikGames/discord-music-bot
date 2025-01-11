@@ -5,6 +5,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions"
+	"github.com/BulizhnikGames/discord-music-bot/internal/interactions/middleware"
 	"os"
 	"os/signal"
 )
@@ -27,15 +28,17 @@ func main() {
 
 	discordBot := bot.Init(cfg.BotToken, cfg.AppID, cfg.SearchLimit)
 
-	discordBot.RegisterCommand("play", interactions.PlayInteraction)
-	discordBot.RegisterCommand("leave", interactions.LeaveInteraction)
-	discordBot.RegisterCommand("clear", interactions.ClearInteraction)
-	discordBot.RegisterCommand("stop", interactions.StopInteraction)
-	discordBot.RegisterCommand("skip", interactions.SkipInteraction)
-	discordBot.RegisterCommand("shuffle", interactions.ShuffleInteraction)
-	discordBot.RegisterCommand("queue", interactions.QueueInteraction)
-	discordBot.RegisterCommand("nowplaying", interactions.NowPlayingInteraction)
-	discordBot.RegisterCommand("loop", interactions.LoopInteraction)
+	discordBot.RegisterCommand("play", middleware.ActiveChannelOnly(interactions.PlayInteraction, false))
+	discordBot.RegisterCommand("leave", middleware.ActiveChannelOnly(interactions.LeaveInteraction, true))
+	discordBot.RegisterCommand("clear", middleware.ActiveChannelOnly(interactions.ClearInteraction, true))
+	discordBot.RegisterCommand("stop", middleware.ActiveChannelOnly(interactions.ClearInteraction, true))
+	discordBot.RegisterCommand("skip", middleware.ActiveChannelOnly(interactions.SkipInteraction, true))
+	discordBot.RegisterCommand("shuffle", middleware.ActiveChannelOnly(interactions.ShuffleInteraction, true))
+	discordBot.RegisterCommand("queue", middleware.ActiveChannelOnly(interactions.QueueInteraction, false))
+	discordBot.RegisterCommand("nowplaying", middleware.ActiveChannelOnly(interactions.NowPlayingInteraction, false))
+	discordBot.RegisterCommand("loop", middleware.ActiveChannelOnly(interactions.LoopInteraction, true))
+	discordBot.RegisterCommand("pause", middleware.ActiveChannelOnly(interactions.PauseInteraction, true))
+	discordBot.RegisterCommand("resume", middleware.ActiveChannelOnly(interactions.ResumeInteraction, true))
 
 	go discordBot.Run()
 

@@ -68,3 +68,7 @@ func (voiceChat *VoiceEntity) clearCacheCnt() {
 		cache.Cnt = 0
 	}
 }
+
+func (voiceChat *VoiceEntity) GetVoiceChatID() string {
+	return voiceChat.voiceConnection.ChannelID
+}

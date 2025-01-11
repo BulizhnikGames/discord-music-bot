@@ -79,7 +79,7 @@ func autoComplete(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate)
 		},
 	})
 	if err != nil {
-		return errors.Errorf("couldn't send autocomplete options (%v) to user: %s", choices, err)
+		return errors.Errorf("couldn't send play autocomplete options (%v) to user: %v", choices, err)
 	}
 
 	return nil

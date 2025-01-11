@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"github.com/jogramming/dca"
 	"log"
 	"math/rand/v2"
 	"os"
@@ -27,6 +28,12 @@ func (song *Song) Delete() {
 
 type SongCache struct {
 	Cnt int
+	*Song
+}
+
+type PlayingSong struct {
+	Skip   func()
+	Stream *dca.StreamingSession
 	*Song
 }
 

@@ -83,7 +83,10 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 	//time.Sleep(500 * time.Millisecond)
 
 	playContext, cancel := context.WithCancel(ctx)
-	voiceChat.skip = func() {
+	voiceChat.nowPlaying = &internal.PlayingSong{
+		Song: song,
+	}
+	voiceChat.nowPlaying.Skip = func() {
 		voiceChat.nowPlaying = nil
 		cancel()
 		if voiceChat.loop == 2 {
@@ -108,8 +111,7 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 	}
 
 	done := make(chan error)
-	voiceChat.nowPlaying = song
-	dca.NewStream(encodeSession, voiceChat.voiceConnection, done)
+	voiceChat.nowPlaying.Stream = dca.NewStream(encodeSession, voiceChat.voiceConnection, done)
 	select {
 	case err = <-done:
 		if err != nil && err != io.EOF {
@@ -123,7 +125,7 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 		}
 		return nil
 	}
-	voiceChat.skip()
+	voiceChat.nowPlaying.Skip()
 	log.Printf("End of song %s", song.Title)
 	if voiceChat.loop == 2 {
 		encodeSession.Cleanup()

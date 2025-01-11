@@ -26,6 +26,30 @@ func LoopInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCrea
 			responseToInteraction(bot, interaction, fmt.Sprintf(":ballot_box_with_check: looping disabled :ballot_box_with_check:"), 0)
 		}
 		return nil
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		err := bot.Session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: []*discordgo.ApplicationCommandOptionChoice{
+					{
+						Name:  "no loop",
+						Value: 0,
+					},
+					{
+						Name:  "loop queue",
+						Value: 1,
+					},
+					{
+						Name:  "loop song",
+						Value: 2,
+					},
+				},
+			},
+		})
+		if err != nil {
+			return errors.Errorf("couldn't send loop autocomplete options to user: %v", err)
+		}
+		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
 	}
