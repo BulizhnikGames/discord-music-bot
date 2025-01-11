@@ -22,7 +22,7 @@ func Download(ctx context.Context, guildID, query string) (*internal.Song, error
 	}
 	args := []string{
 		firstArg,
-		"-N", "8",
+		"-N", "4",
 		"--extract-audio",
 		"--buffer-size", "65536",
 		"--retries", "1",
@@ -44,14 +44,14 @@ func Download(ctx context.Context, guildID, query string) (*internal.Song, error
 	} else {
 		commandPath = config.Utils + "yt-dlp.exe"
 	}
-	cmd := exec.Command(commandPath, args...)
+	cmd := exec.CommandContext(ctx, commandPath, args...)
 	if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
-		return nil, errors.Errorf("failed to search and download audio: %v: %s", err)
+		return nil, errors.Errorf("failed to search and download audio (query %s): %v", query, err)
 	} else {
 		videoMetadata := internal.VideoMetadata{}
 		err = json.Unmarshal(data, &videoMetadata)
 		if err != nil {
-			return nil, errors.Errorf("failed to unmarshal video metadata: %v", err)
+			return nil, errors.Errorf("failed to unmarshal video metadata (query %s): %v", query, err)
 		}
 		//dotIdx := strings.LastIndex(videoMetadata.Filename, ".")
 		//slashIdx := strings.LastIndex(videoMetadata.Filename, `\`)

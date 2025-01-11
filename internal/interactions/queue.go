@@ -26,18 +26,17 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 			maxLength = max(maxLength, utf8.RuneCountInString(song)+utf8.RuneCountInString(strconv.Itoa(i))+3)
 		}
 		message := strings.Builder{}
-		message.WriteString(":musical_note: playback queue :musical_note:")
-		message.WriteString("\n`")
+		message.WriteString(":musical_note: playback queue :musical_note:\n")
 		for i, song := range queue {
+			message.WriteRune('`')
 			message.WriteString(fmt.Sprintf("%d. %s", i+1, song))
 			diff := maxLength - (utf8.RuneCountInString(song) + utf8.RuneCountInString(strconv.Itoa(i)) + 2)
 			for j := 0; j < diff; j++ {
 				message.WriteRune(' ')
 			}
+			message.WriteRune('`')
 			if i != len(queue)-1 {
 				message.WriteString("\n")
-			} else {
-				message.WriteString("`")
 			}
 		}
 		responseToInteraction(bot, interaction, message.String(), 0)

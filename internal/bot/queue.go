@@ -9,14 +9,8 @@ import (
 )
 
 func (voiceChat *VoiceEntity) InsertQueue(query string) {
-	voiceChat.Queue.Write(&internal.Song{Query: query})
+	voiceChat.Queue.Write(internal.Song{Query: query})
 }
-
-/*func (voiceChat *VoiceEntity) insertToSongQueue(song internal.SongCache) {
-	voiceChat.queueMutex.Lock()
-	defer voiceChat.queueMutex.Unlock()
-	voiceChat.songQueue <- song
-}*/
 
 func (bot *DiscordBot) ShuffleQueue(guildID string) error {
 	bot.VoiceEntities.Mutex.RLock()
@@ -80,9 +74,8 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 				voiceChat.nowPlaying.Author,
 			)}, nil
 		}
-		songs := voiceChat.Queue.Get()
-		res := make([]string, 0, len(songs)+1)
-		for _, song := range songs {
+		res := make([]string, 0, voiceChat.Queue.Len+1)
+		for song := range voiceChat.Queue.All() {
 			var add string
 			if song.Title != "" {
 				add = fmt.Sprintf(

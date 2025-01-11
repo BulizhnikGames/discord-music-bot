@@ -14,7 +14,12 @@ func PlayInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCrea
 	case discordgo.InteractionApplicationCommand:
 		return play(bot, interaction)
 	case discordgo.InteractionApplicationCommandAutocomplete:
-		return autoComplete(bot, interaction)
+		err := autoComplete(bot, interaction)
+		//dont handle error if it's 403 - quota exited
+		if err != nil && strings.Contains(err.Error(), "403") {
+			err = nil
+		}
+		return err
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
 	}
