@@ -59,7 +59,7 @@ func (queue *MusicQueue) SetHandler(handler func(ctx context.Context, val *Song)
 	queue.WriteHandler = handler
 }
 
-func (queue *MusicQueue) AskHandle() {
+func (queue *MusicQueue) askHandle() {
 	go func() {
 		queue.tryHandleSignal <- struct{}{}
 	}()
@@ -85,7 +85,7 @@ func (queue *MusicQueue) Run() {
 			queue.ctx, queue.stopHandlers = context.WithCancel(context.Background())
 			queue.handleNode = queue.readNode
 			queue.mutex.Unlock()
-			queue.AskHandle()
+			queue.askHandle()
 		case <-queue.tryHandleSignal:
 			for queue.notNilValToHandle() {
 				queue.mutex.RLock()
@@ -93,7 +93,7 @@ func (queue *MusicQueue) Run() {
 				if !queue.handleNode.handled {
 					handleNodeCopy := queue.handleNode
 					queue.mutex.RUnlock()
-					queue.HandleElement(queue.ctx, handleNodeCopy)
+					queue.handleElement(queue.ctx, handleNodeCopy)
 				} else {
 					queue.mutex.RUnlock()
 					queue.mutex.Lock()
@@ -105,7 +105,7 @@ func (queue *MusicQueue) Run() {
 	}
 }
 
-func (queue *MusicQueue) HandleElement(ctx context.Context, listNode *node) {
+func (queue *MusicQueue) handleElement(ctx context.Context, listNode *node) {
 	queue.mutex.RLock()
 	val := listNode.val
 	queue.mutex.RUnlock()
@@ -140,7 +140,7 @@ func (queue *MusicQueue) Write(v Song) {
 	//log.Printf("written at %d", queue.writeNode.idx)
 	queue.Len++
 	queue.writeNode = queue.writeNode.next
-	queue.AskHandle()
+	queue.askHandle()
 }
 
 func (queue *MusicQueue) ReadHandled() *Song {
