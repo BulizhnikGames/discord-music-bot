@@ -14,7 +14,12 @@ import (
 	"time"
 )
 
-func Download(ctx context.Context, guildID, query string) (*internal.Song, error) {
+type Result struct {
+	Downloaded *internal.Song
+	Err        error
+}
+
+func Download(ctx context.Context, guildID, query string, res chan<- Result) {
 	start := time.Now()
 	firstArg := query
 	if !strings.HasPrefix(query, config.LINK_PREFIX) {
@@ -22,7 +27,7 @@ func Download(ctx context.Context, guildID, query string) (*internal.Song, error
 	}
 	args := []string{
 		firstArg,
-		"-N", "4",
+		//"-N", "4",
 		"--extract-audio",
 		"--buffer-size", "65536",
 		"--retries", "1",
@@ -44,31 +49,31 @@ func Download(ctx context.Context, guildID, query string) (*internal.Song, error
 	} else {
 		commandPath = config.Utils + "yt-dlp.exe"
 	}
-	cmd := exec.CommandContext(ctx, commandPath, args...)
+	cmd := exec.Command(commandPath, args...)
 	if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
-		return nil, errors.Errorf("failed to search and download audio (query %s): %v", query, err)
+		res <- Result{nil, errors.Errorf("failed to search and download audio (query %s): %v", query, err)}
 	} else {
 		videoMetadata := internal.VideoMetadata{}
 		err = json.Unmarshal(data, &videoMetadata)
 		if err != nil {
-			return nil, errors.Errorf("failed to unmarshal video metadata (query %s): %v", query, err)
+			res <- Result{nil, errors.Errorf("failed to unmarshal video metadata (query %s): %v", query, err)}
 		}
 		//dotIdx := strings.LastIndex(videoMetadata.Filename, ".")
 		//slashIdx := strings.LastIndex(videoMetadata.Filename, `\`)
 		path := fmt.Sprintf("%s%s/%d-%s.opus", config.Storage, guildID, start.Unix(), videoMetadata.ID)
 		select {
 		case <-ctx.Done():
-			os.Remove(path)
-			return nil, ctx.Err()
+			os.RemoveAll(path)
+			res <- Result{nil, ctx.Err()}
 		default:
-			return &internal.Song{
+			res <- Result{&internal.Song{
 				Title:    videoMetadata.Title,
 				Author:   videoMetadata.Uploader,
 				URL:      videoMetadata.URL,
 				Query:    query,
 				FilePath: path,
 				Duration: videoMetadata.Duration,
-			}, nil
+			}, nil}
 		}
 	}
 }

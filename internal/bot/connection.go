@@ -31,7 +31,7 @@ func (bot *DiscordBot) JoinVoiceChat(guildID, voiceChannel, textChannel string) 
 		return nil, errors.Wrap(err, "Couldn't join voice chat")
 	}
 
-	queue := internal.CreateCycleQueue[internal.Song](150)
+	queue := internal.CreateCycleQueue(150)
 	go queue.Run()
 	voiceChat := &VoiceEntity{
 		voiceConnection: voiceData,

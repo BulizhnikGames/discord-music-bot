@@ -43,29 +43,28 @@ func (voiceChat *VoiceEntity) downloadSong(ctx context.Context, song *internal.S
 	if cache, ok := voiceChat.cache.Data[song.Query]; ok {
 		log.Printf("Song is already in cache: %s", song.Query)
 		cache.Cnt++
+		voiceChat.cache.Mutex.Unlock()
 		return cache.Song, nil
 	}
 	voiceChat.cache.Mutex.Unlock()
 	log.Printf("Downloading song: %s", song.Query)
-	downloaded, err := youtube.Download(ctx, voiceChat.voiceConnection.GuildID, song.Query)
-	if err != nil {
-		return nil, errors.Errorf("couldn't download song: %v", err)
-	}
-	log.Printf("Downloaded song: %v", downloaded.Title)
-	voiceChat.cache.Mutex.Lock()
-	defer voiceChat.cache.Mutex.Unlock()
-	voiceChat.cache.Data[song.Query] = &internal.SongCache{
-		Cnt:  1,
-		Song: downloaded,
-	}
-	return downloaded, nil
-}
-
-func (voiceChat *VoiceEntity) clearCacheCnt() {
-	voiceChat.cache.Mutex.Lock()
-	defer voiceChat.cache.Mutex.Unlock()
-	for _, cache := range voiceChat.cache.Data {
-		cache.Cnt = 0
+	res := make(chan youtube.Result)
+	go youtube.Download(ctx, voiceChat.voiceConnection.GuildID, song.Query, res)
+	select {
+	case data := <-res:
+		if data.Err != nil {
+			return nil, errors.Errorf("couldn't download song: %v", data.Err)
+		}
+		log.Printf("Downloaded song: %v", data.Downloaded.Title)
+		voiceChat.cache.Mutex.Lock()
+		defer voiceChat.cache.Mutex.Unlock()
+		voiceChat.cache.Data[song.Query] = &internal.SongCache{
+			Cnt:  1,
+			Song: data.Downloaded,
+		}
+		return data.Downloaded, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 }
 

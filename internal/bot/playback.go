@@ -86,7 +86,12 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 	voiceChat.nowPlaying = &internal.PlayingSong{
 		Song: song,
 	}
-	voiceChat.nowPlaying.Skip = func() {
+	voiceChat.nowPlaying.Skip = func(clear bool) {
+		if clear {
+			encodeSession.Cleanup()
+			cancel()
+			return
+		}
 		voiceChat.nowPlaying = nil
 		cancel()
 		if voiceChat.loop == 2 {
@@ -125,7 +130,7 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 		}
 		return nil
 	}
-	voiceChat.nowPlaying.Skip()
+	voiceChat.nowPlaying.Skip(false)
 	log.Printf("End of song %s", song.Title)
 	if voiceChat.loop == 2 {
 		encodeSession.Cleanup()

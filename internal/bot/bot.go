@@ -17,7 +17,7 @@ type InteractionMiddleware func(next InteractionFunc, arg any) InteractionFunc
 
 type VoiceEntity struct {
 	voiceConnection *discordgo.VoiceConnection
-	Queue           *internal.CycleQueue[internal.Song]
+	Queue           *internal.MusicQueue
 	nowPlaying      *internal.PlayingSong
 	cache           internal.AsyncMap[string, *internal.SongCache] // key is user's query for song
 	loop            int                                            // 0 - no loop, 1 - queue loop, 2 - single loop
@@ -122,7 +122,7 @@ func Init(BotToken, AppID string, searchLimit int) *DiscordBot {
 		Youtube:      api.NewService(searchLimit),
 		Interactions: make(map[string]InteractionFunc),
 		VoiceEntities: internal.AsyncMap[string, *VoiceEntity]{
-			Data:  make(map[string]*VoiceEntity, 200),
+			Data:  make(map[string]*VoiceEntity),
 			Mutex: &sync.RWMutex{},
 		},
 	}

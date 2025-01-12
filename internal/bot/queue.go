@@ -5,6 +5,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/go-faster/errors"
+	"log"
 	"os"
 )
 
@@ -41,17 +42,21 @@ func (bot *DiscordBot) ClearQueue(guildID string) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		if voiceChat.nowPlaying != nil {
-			save := voiceChat.loop
-			voiceChat.loop = 0
-			voiceChat.nowPlaying.Skip()
-			voiceChat.loop = save
-		}
 		voiceChat.Queue.Clear()
+
+		if voiceChat.nowPlaying != nil {
+			voiceChat.nowPlaying.Skip(true)
+		}
+
 		voiceChat.cache.Mutex.Lock()
-		defer voiceChat.cache.Mutex.Unlock()
-		os.Remove(config.Storage + guildID)
 		clear(voiceChat.cache.Data)
+		voiceChat.cache.Mutex.Unlock()
+
+		err := os.RemoveAll(config.Storage + guildID + "/")
+		if err != nil {
+			log.Printf("couldn't delete guilds cache: %v", err)
+		}
+
 		return nil
 	} else {
 		return errors.New("bot isn't in the voice chat")
@@ -113,7 +118,7 @@ func (bot *DiscordBot) SkipSong(guildID string) error {
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
 		if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.Skip != nil {
-			voiceChat.nowPlaying.Skip()
+			voiceChat.nowPlaying.Skip(false)
 		}
 		return nil
 	} else {

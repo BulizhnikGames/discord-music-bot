@@ -30,7 +30,7 @@ type SongCache struct {
 }
 
 type PlayingSong struct {
-	Skip   func()
+	Skip   func(bool)
 	Stream *dca.StreamingSession
 	*Song
 }

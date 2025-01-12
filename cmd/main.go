@@ -20,9 +20,6 @@ import (
 // TODO: improve usage of YT API
 
 // TODO: improve getting processed song from queue (optional)
-// TODO: improve canceling context of downloading
-// TODO: cleanup songs
-// TODO: freeze incoming play commands while waiting to connect
 
 func main() {
 	cfg := config.LoadConfig()

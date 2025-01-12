@@ -4,41 +4,43 @@ import (
 	"context"
 	"fmt"
 	"iter"
-	"log"
 	"math/rand/v2"
 	"strings"
 	"sync"
 )
 
-type node[T any] struct {
-	prev, next *node[T]
-	val        *T
+type node struct {
+	prev, next *node
+	val        *Song
 	handled    bool
+	//idx        int
 }
 
-type CycleQueue[T any] struct {
-	firstNode, readNode, writeNode, handleNode *node[T]
+type MusicQueue struct {
+	firstNode, readNode, writeNode, handleNode *node
 	Len, Cap                                   int
 	mutex                                      *sync.RWMutex
-	WriteHandler                               func(ctx context.Context, val *T) (*T, error)
+	WriteHandler                               func(ctx context.Context, val *Song) (*Song, error)
 	ctx                                        context.Context
 	stopHandlers                               context.CancelFunc
 	tryHandleSignal                            chan struct{}
 }
 
-func CreateCycleQueue[T any](size int) *CycleQueue[T] {
+func CreateCycleQueue(size int) *MusicQueue {
 	ctx, cancel := context.WithCancel(context.Background())
-	firstNode := &node[T]{}
+	//firstNode := &node{idx: 0}
+	firstNode := &node{}
 	prevNode := firstNode
 	for i := 1; i < size; i++ {
-		newNode := &node[T]{
+		newNode := &node{
 			prev: prevNode,
+			//idx:  i,
 		}
 		prevNode.next = newNode
 		prevNode = newNode
 	}
 	firstNode.prev = prevNode
-	return &CycleQueue[T]{
+	return &MusicQueue{
 		firstNode:       firstNode,
 		readNode:        firstNode,
 		writeNode:       firstNode,
@@ -51,24 +53,31 @@ func CreateCycleQueue[T any](size int) *CycleQueue[T] {
 	}
 }
 
-func (queue *CycleQueue[T]) SetHandler(handler func(ctx context.Context, val *T) (*T, error)) {
+func (queue *MusicQueue) SetHandler(handler func(ctx context.Context, val *Song) (*Song, error)) {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	queue.WriteHandler = handler
 }
 
-func (queue *CycleQueue[T]) notNilValToHandle() bool {
+func (queue *MusicQueue) AskHandle() {
+	go func() {
+		queue.tryHandleSignal <- struct{}{}
+	}()
+}
+
+func (queue *MusicQueue) notNilValToHandle() bool {
 	select {
 	case <-queue.ctx.Done():
 		return false
 	default:
 		queue.mutex.RLock()
 		defer queue.mutex.RUnlock()
+		//log.Printf("checking at %d (%p): %+v", queue.handleNode.idx, queue.handleNode, queue.handleNode.val)
 		return queue.handleNode.val != nil
 	}
 }
 
-func (queue *CycleQueue[T]) Run() {
+func (queue *MusicQueue) Run() {
 	for {
 		select {
 		case <-queue.ctx.Done():
@@ -76,11 +85,11 @@ func (queue *CycleQueue[T]) Run() {
 			queue.ctx, queue.stopHandlers = context.WithCancel(context.Background())
 			queue.handleNode = queue.readNode
 			queue.mutex.Unlock()
-			queue.tryHandleSignal <- struct{}{}
+			queue.AskHandle()
 		case <-queue.tryHandleSignal:
 			for queue.notNilValToHandle() {
 				queue.mutex.RLock()
-				log.Printf("trying to handle: %+v", queue.handleNode.val)
+				//log.Printf("trying to handle: %+v", queue.handleNode.val)
 				if !queue.handleNode.handled {
 					handleNodeCopy := queue.handleNode
 					queue.mutex.RUnlock()
@@ -96,7 +105,7 @@ func (queue *CycleQueue[T]) Run() {
 	}
 }
 
-func (queue *CycleQueue[T]) HandleElement(ctx context.Context, listNode *node[T]) {
+func (queue *MusicQueue) HandleElement(ctx context.Context, listNode *node) {
 	queue.mutex.RLock()
 	val := listNode.val
 	queue.mutex.RUnlock()
@@ -106,7 +115,7 @@ func (queue *CycleQueue[T]) HandleElement(ctx context.Context, listNode *node[T]
 	processed, err := queue.WriteHandler(ctx, val)
 	if err != nil {
 		processed = val
-		log.Printf("couldn't handle new element: %v", err)
+		//log.Printf("couldn't handle new element: %v", err)
 	}
 	select {
 	case <-ctx.Done():
@@ -120,21 +129,21 @@ func (queue *CycleQueue[T]) HandleElement(ctx context.Context, listNode *node[T]
 	listNode.handled = err == nil
 }
 
-func (queue *CycleQueue[T]) Write(v T) {
-	log.Printf("write")
+func (queue *MusicQueue) Write(v Song) {
+	//log.Printf("write")
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	if queue.writeNode.val != nil {
 		return
 	}
 	queue.writeNode.val = &v
-	log.Printf("written")
+	//log.Printf("written at %d", queue.writeNode.idx)
 	queue.Len++
 	queue.writeNode = queue.writeNode.next
-	queue.tryHandleSignal <- struct{}{}
+	queue.AskHandle()
 }
 
-func (queue *CycleQueue[T]) ReadHandled() *T {
+func (queue *MusicQueue) ReadHandled() *Song {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	if queue.readNode.val == nil || !queue.readNode.handled {
@@ -147,17 +156,24 @@ func (queue *CycleQueue[T]) ReadHandled() *T {
 	return &v
 }
 
-func (queue *CycleQueue[T]) Clear() {
+func (queue *MusicQueue) Clear() {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	queue.writeNode = queue.firstNode
+	queue.readNode = queue.firstNode
 	queue.handleNode = queue.firstNode
+	remover := queue.firstNode
+	for i := 0; i < queue.Cap; i++ {
+		remover.val = nil
+		remover.handled = false
+		remover = remover.next
+	}
 	queue.stopHandlers()
 	queue.Len = 0
 }
 
-func (queue *CycleQueue[T]) All() iter.Seq[T] {
-	return func(yield func(v T) bool) {
+func (queue *MusicQueue) All() iter.Seq[Song] {
+	return func(yield func(v Song) bool) {
 		queue.mutex.Lock()
 		defer queue.mutex.Unlock()
 		reader := *queue.readNode
@@ -168,10 +184,10 @@ func (queue *CycleQueue[T]) All() iter.Seq[T] {
 	}
 }
 
-func (queue *CycleQueue[T]) Shuffle() {
+func (queue *MusicQueue) Shuffle() {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
-	nodes := make([]*node[T], 0, queue.Len)
+	nodes := make([]*node, 0, queue.Len)
 	reader := queue.readNode
 	builder := strings.Builder{}
 	builder.WriteString("Queue:")
@@ -181,7 +197,7 @@ func (queue *CycleQueue[T]) Shuffle() {
 		reader = reader.next
 	}
 	//log.Println(builder.String())
-	rand.Shuffle(queue.Len, func(i, j int) {
+	rand.Shuffle(len(nodes), func(i, j int) {
 		tmpVal, tmpHandled := nodes[i].val, nodes[i].handled
 		nodes[i].val = nodes[j].val
 		nodes[i].handled = nodes[j].handled
