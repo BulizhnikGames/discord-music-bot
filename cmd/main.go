@@ -15,8 +15,6 @@ import (
 
 // TODO: select text channel
 
-// TODO: send dj role normally
-
 // TODO: add /help or /info
 
 func main() {

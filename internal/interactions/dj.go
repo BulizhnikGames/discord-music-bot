@@ -16,7 +16,7 @@ func DJModeInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCr
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":drum:  DJ role is set to @%s  :drum:", role.Name))
+		responseToInteraction(bot, interaction, fmt.Sprintf(":drum:  DJ role is set to <@&%s>  :drum:", role.ID))
 		return nil
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		guildID := interaction.GuildID
