@@ -14,7 +14,7 @@ func PauseInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":pause_button: playback paused :pause_button:"))
+		responseToInteraction(bot, interaction, fmt.Sprintf(":pause_button:  playback paused  :pause_button:"))
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())

@@ -14,7 +14,7 @@ func ClearInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":stop_button: queue cleared :stop_button:"))
+		responseToInteraction(bot, interaction, fmt.Sprintf(":stop_button:  queue cleared  :stop_button:"))
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())

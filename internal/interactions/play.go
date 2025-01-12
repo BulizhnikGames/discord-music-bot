@@ -78,9 +78,9 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 
 	var message string
 	if len(videos) == 0 {
-		message = fmt.Sprintf("Added song to queue: %s", song)
+		message = fmt.Sprintf(":white_check_mark: added song to queue: %s", song)
 	} else {
-		message = fmt.Sprintf("Added playlist to queue: %s", song)
+		message = fmt.Sprintf(":white_check_mark: added playlist to queue: %s", song)
 	}
 	responseToInteraction(bot, interaction, message)
 

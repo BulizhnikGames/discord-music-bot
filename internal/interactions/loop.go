@@ -17,13 +17,13 @@ func LoopInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCrea
 		}
 		switch loop {
 		case 0:
-			responseToInteraction(bot, interaction, fmt.Sprintf(":ballot_box_with_check: looping disabled :ballot_box_with_check:"))
+			responseToInteraction(bot, interaction, fmt.Sprintf(":ballot_box_with_check:  looping disabled  :ballot_box_with_check:"))
 		case 1:
-			responseToInteraction(bot, interaction, fmt.Sprintf(":repeat: looping over queue :repeat:"))
+			responseToInteraction(bot, interaction, fmt.Sprintf(":repeat:  looping over queue  :repeat:"))
 		case 2:
-			responseToInteraction(bot, interaction, fmt.Sprintf(":repeat_one: looping over song :repeat_one:"))
+			responseToInteraction(bot, interaction, fmt.Sprintf(":repeat_one:  looping over song  :repeat_one:"))
 		default:
-			responseToInteraction(bot, interaction, fmt.Sprintf(":ballot_box_with_check: looping disabled :ballot_box_with_check:"))
+			responseToInteraction(bot, interaction, fmt.Sprintf(":ballot_box_with_check:  looping disabled  :ballot_box_with_check:"))
 		}
 		return nil
 	case discordgo.InteractionApplicationCommandAutocomplete:

@@ -60,6 +60,7 @@ func (bot *DiscordBot) LeaveVoiceChat(guildID string) error {
 	bot.VoiceEntities.Mutex.Lock()
 	defer bot.VoiceEntities.Mutex.Unlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
+		voiceChat.queue.Clear()
 		voiceChat.loop = 0
 		voiceChat.stop()
 		err := voiceChat.voiceConnection.Disconnect()

@@ -15,6 +15,8 @@ import (
 // TODO: dj role
 // TODO: select text channel
 
+// TODO: add /help or /info
+
 func main() {
 	cfg := config.LoadConfig()
 

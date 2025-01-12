@@ -18,7 +18,7 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 			return err
 		}
 		if len(queue) == 0 {
-			responseToInteraction(bot, interaction, ":musical_note: playback queue is empty :musical_note:")
+			responseToInteraction(bot, interaction, ":musical_note:  playback queue is empty  :musical_note:")
 			return nil
 		}
 		maxLength := 0
@@ -26,7 +26,7 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 			maxLength = max(maxLength, utf8.RuneCountInString(song)+utf8.RuneCountInString(strconv.Itoa(i))+2)
 		}
 		message := strings.Builder{}
-		message.WriteString(":musical_note: playback queue :musical_note:\n")
+		message.WriteString(":musical_note:  playback queue  :musical_note:\n")
 		for i, song := range queue {
 			message.WriteRune('`')
 			message.WriteString(fmt.Sprintf("%d. %s", i+1, song))

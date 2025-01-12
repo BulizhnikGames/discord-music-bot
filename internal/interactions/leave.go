@@ -14,7 +14,7 @@ func LeaveInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":no_entry: left voice channel :no_entry:"))
+		responseToInteraction(bot, interaction, fmt.Sprintf(":no_entry:  left voice channel  :no_entry:"))
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())

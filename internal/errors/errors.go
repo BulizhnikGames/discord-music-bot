@@ -46,10 +46,3 @@ func (Det *DetailedError) AddUserf(format string, a ...interface{}) *DetailedErr
 	Det.User = wrapper.Wrapf(Det.User, format, a)
 	return Det
 }
-
-func NewBoth(log, user string) *DetailedError {
-	return &DetailedError{
-		Log:  goerrors.New(log),
-		User: goerrors.New(user),
-	}
-}

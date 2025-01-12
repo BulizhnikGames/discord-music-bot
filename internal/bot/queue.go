@@ -7,6 +7,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"log"
 	"os"
+	"time"
 )
 
 func (voiceChat *VoiceEntity) InsertQueue(song internal.Song) {
@@ -139,15 +140,18 @@ func (bot *DiscordBot) Pause(guildID string, pause bool) error {
 	}
 }
 
-func (bot *DiscordBot) NowPlaying(guildID string) (*internal.Song, error) {
+func (bot *DiscordBot) NowPlaying(guildID string) (*internal.Song, int, error) {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
 		if voiceChat.nowPlaying == nil {
-			return nil, nil
+			return nil, 0, nil
 		}
-		return voiceChat.nowPlaying.Song, nil
+		if voiceChat.nowPlaying.Stream == nil {
+			return nil, 0, nil
+		}
+		return voiceChat.nowPlaying.Song, int(voiceChat.nowPlaying.Stream.PlaybackPosition() / time.Second), nil
 	} else {
-		return nil, errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
+		return nil, 0, errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }

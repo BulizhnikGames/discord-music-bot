@@ -10,14 +10,16 @@ import (
 func NowPlayingInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 	switch interaction.Type {
 	case discordgo.InteractionApplicationCommand:
-		song, err := bot.NowPlaying(interaction.GuildID)
+		song, curr, err := bot.NowPlaying(interaction.GuildID)
 		if err != nil {
 			return err
 		}
 		if song != nil {
 			message := fmt.Sprintf(
-				":musical_note: now playing `%s | %d:%02d` by `%s` :musical_note:",
+				":musical_note:  now playing `%s | %d:%02d / %d:%02d` by `%s`  :musical_note:",
 				song.Title,
+				curr/60,
+				curr%60,
 				song.Duration/60,
 				song.Duration%60,
 				song.Author,
