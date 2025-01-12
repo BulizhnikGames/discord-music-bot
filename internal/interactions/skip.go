@@ -14,7 +14,7 @@ func SkipInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCrea
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":fast_forward: skipped"), 0)
+		responseToInteraction(bot, interaction, fmt.Sprintf(":fast_forward: skipped"))
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())

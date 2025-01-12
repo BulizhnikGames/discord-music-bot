@@ -2,11 +2,15 @@ package interactions
 
 import (
 	"fmt"
+	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-faster/errors"
+	ytsearch "github.com/kkdai/youtube/v2"
+	"log"
 	"strings"
+	"time"
 )
 
 func PlayInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
@@ -31,6 +35,21 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 	data := interaction.ApplicationCommandData()
 	song := data.Options[0].StringValue()
 
+	var videos []*ytsearch.PlaylistEntry
+	if strings.Contains(song, config.LINK_PREFIX) {
+		client := ytsearch.Client{}
+		playlist, err := client.GetPlaylist(song)
+		if err == nil {
+			if len(playlist.Videos) > config.QUEUE_SIZE {
+				return errors.New("playlist is too big")
+			}
+			videos = make([]*ytsearch.PlaylistEntry, len(playlist.Videos))
+			for i, video := range playlist.Videos {
+				videos[i] = video
+			}
+		}
+	}
+
 	channelID, err := bot.GetUsersVoiceChat(interaction.GuildID, interaction.Member.User)
 	if err != nil {
 		return errors.Wrap(err, "User is not in voice chat")
@@ -40,9 +59,30 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 	if err != nil {
 		return err
 	}
-	voiceChat.InsertQueue(song)
 
-	responseToInteraction(bot, interaction, fmt.Sprintf("Added to queue: %s", song), discordgo.MessageFlagsEphemeral)
+	if len(videos) == 0 {
+		voiceChat.InsertQueue(internal.Song{Query: song})
+	} else {
+		go func() {
+			log.Printf("!")
+			for _, video := range videos {
+				voiceChat.InsertQueue(internal.Song{
+					Title:    video.Title,
+					Author:   video.Author,
+					Query:    config.LINK_PREFIX + video.ID,
+					Duration: int(video.Duration / time.Second),
+				})
+			}
+		}()
+	}
+
+	var message string
+	if len(videos) == 0 {
+		message = fmt.Sprintf("Added song to queue: %s", song)
+	} else {
+		message = fmt.Sprintf("Added playlist to queue: %s", song)
+	}
+	responseToInteraction(bot, interaction, message)
 
 	return nil
 }

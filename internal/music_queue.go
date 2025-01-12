@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"iter"
+	"log"
 	"math/rand/v2"
 	"sync"
 )
@@ -95,17 +96,16 @@ func (queue *MusicQueue) Run() {
 		case <-queue.tryHandleSignal:
 			for queue.notNilValToHandle() {
 				queue.mutex.RLock()
+				handled := queue.handleNode.handled
+				handleNodeCopy := queue.handleNode
+				queue.mutex.RUnlock()
 				//log.Printf("trying to handle: %+v", queue.handleNode.val)
-				if !queue.handleNode.handled {
-					handleNodeCopy := queue.handleNode
-					queue.mutex.RUnlock()
+				if !handled {
 					queue.handleElement(queue.ctx, handleNodeCopy)
-				} else {
-					queue.mutex.RUnlock()
-					queue.mutex.Lock()
-					queue.handleNode = queue.handleNode.next
-					queue.mutex.Unlock()
 				}
+				queue.mutex.Lock()
+				queue.handleNode = queue.handleNode.next
+				queue.mutex.Unlock()
 			}
 		}
 	}
@@ -120,8 +120,7 @@ func (queue *MusicQueue) handleElement(ctx context.Context, listNode *node) {
 	}
 	processed, err := queue.WriteHandler(ctx, val)
 	if err != nil {
-		processed = val
-		//log.Printf("couldn't handle new element: %v", err)
+		log.Printf("couldn't handle new element: %v", err)
 	}
 	select {
 	case <-ctx.Done():
@@ -131,11 +130,11 @@ func (queue *MusicQueue) handleElement(ctx context.Context, listNode *node) {
 	}
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
-	listNode.val = processed
-	listNode.handled = err == nil
-	if err == nil {
-		queue.notify()
+	if processed != nil {
+		listNode.val = processed
 	}
+	listNode.handled = true
+	queue.notify()
 }
 
 func (queue *MusicQueue) Write(v Song) {
@@ -155,14 +154,15 @@ func (queue *MusicQueue) Write(v Song) {
 func (queue *MusicQueue) ReadHandled() *Song {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
-	if queue.readNode.val == nil || !queue.readNode.handled {
+	if queue.readNode.val == nil {
 		return nil
 	}
-	v := *queue.readNode.val
+	valCopy := *queue.readNode.val
 	queue.readNode.val = nil
+	queue.readNode.handled = false
 	queue.Len--
 	queue.readNode = queue.readNode.next
-	return &v
+	return &valCopy
 }
 
 func (queue *MusicQueue) Clear() {
@@ -181,13 +181,21 @@ func (queue *MusicQueue) Clear() {
 	queue.Len = 0
 }
 
-func (queue *MusicQueue) All() iter.Seq[Song] {
+func (queue *MusicQueue) Part(limit int) iter.Seq[Song] {
 	return func(yield func(v Song) bool) {
 		queue.mutex.Lock()
 		defer queue.mutex.Unlock()
 		reader := *queue.readNode
-		for reader.val != nil {
-			yield(*reader.val)
+		for i := 0; i < limit && reader.val != nil; i++ {
+			if reader.handled {
+				if reader.val.FilePath != "" {
+					yield(*reader.val)
+				} else {
+					i--
+				}
+			} else {
+				yield(*reader.val)
+			}
 			reader = *reader.next
 		}
 	}
@@ -197,15 +205,15 @@ func (queue *MusicQueue) Shuffle() {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	nodes := make([]*node, 0, queue.Len)
-	/*reader := queue.readNode
-	builder := strings.Builder{}
-	builder.WriteString("Queue:")
+	reader := queue.readNode
+	//builder := strings.Builder{}
+	//builder.WriteString("queue:")
 	for reader.val != nil {
-		builder.WriteString(fmt.Sprintf(" %v", reader.val))
+		//builder.WriteString(fmt.Sprintf(" %v", reader.val))
 		nodes = append(nodes, reader)
 		reader = reader.next
 	}
-	log.Println(builder.String())*/
+	//log.Println(builder.String())*/
 	rand.Shuffle(len(nodes), func(i, j int) {
 		tmpVal, tmpHandled := nodes[i].val, nodes[i].handled
 		nodes[i].val = nodes[j].val

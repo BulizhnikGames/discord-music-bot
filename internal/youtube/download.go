@@ -30,7 +30,7 @@ func Download(ctx context.Context, guildID, query string, res chan<- Result) {
 		//"-N", "4",
 		"--extract-audio",
 		"--buffer-size", "4096",
-		"--retries", "1",
+		"--retries", "3",
 		"--audio-format", "opus",
 		"--no-playlist",
 		"--match-filter", fmt.Sprintf("duration < %d & !is_live", 20*60),

@@ -18,12 +18,12 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 			return err
 		}
 		if len(queue) == 0 {
-			responseToInteraction(bot, interaction, ":musical_note: playback queue is empty :musical_note:", 0)
+			responseToInteraction(bot, interaction, ":musical_note: playback queue is empty :musical_note:")
 			return nil
 		}
 		maxLength := 0
 		for i, song := range queue {
-			maxLength = max(maxLength, utf8.RuneCountInString(song)+utf8.RuneCountInString(strconv.Itoa(i))+3)
+			maxLength = max(maxLength, utf8.RuneCountInString(song)+utf8.RuneCountInString(strconv.Itoa(i))+2)
 		}
 		message := strings.Builder{}
 		message.WriteString(":musical_note: playback queue :musical_note:\n")
@@ -39,7 +39,7 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 				message.WriteString("\n")
 			}
 		}
-		responseToInteraction(bot, interaction, message.String(), 0)
+		responseToInteraction(bot, interaction, message.String())
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())

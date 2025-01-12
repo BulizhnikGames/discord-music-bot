@@ -14,7 +14,7 @@ func ShuffleInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionC
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":twisted_rightwards_arrows: shuffled"), 0)
+		responseToInteraction(bot, interaction, fmt.Sprintf(":twisted_rightwards_arrows: shuffled"))
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())

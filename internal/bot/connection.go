@@ -3,7 +3,10 @@ package bot
 import (
 	"context"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
+	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/go-faster/errors"
+	"log"
+	"os"
 	"sync"
 )
 
@@ -35,7 +38,7 @@ func (bot *DiscordBot) JoinVoiceChat(guildID, voiceChannel, textChannel string) 
 	go queue.Run()
 	voiceChat := &VoiceEntity{
 		voiceConnection: voiceData,
-		Queue:           queue,
+		queue:           queue,
 		textChannel:     textChannel,
 		cache: internal.AsyncMap[string, *internal.SongCache]{
 			Data:  make(map[string]*internal.SongCache),
@@ -61,6 +64,10 @@ func (bot *DiscordBot) LeaveVoiceChat(guildID string) error {
 		err := voiceChat.voiceConnection.Disconnect()
 		if err != nil {
 			return err
+		}
+		err = os.RemoveAll(config.Storage + guildID + "/")
+		if err != nil {
+			log.Printf("couldn't delete guilds cache: %v", err)
 		}
 		delete(bot.VoiceEntities.Data, guildID)
 		return nil

@@ -22,9 +22,9 @@ func NowPlayingInteraction(bot *bot.DiscordBot, interaction *discordgo.Interacti
 				song.Duration%60,
 				song.Author,
 			)
-			responseToInteraction(bot, interaction, message, 0)
+			responseToInteraction(bot, interaction, message)
 		} else {
-			responseToInteraction(bot, interaction, ":mute: nothing is playing :mute:", 0)
+			responseToInteraction(bot, interaction, ":mute: nothing is playing :mute:")
 		}
 		return nil
 	default:

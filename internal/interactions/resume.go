@@ -14,7 +14,7 @@ func ResumeInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCr
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":arrow_forward: playback resumed :arrow_forward:"), 0)
+		responseToInteraction(bot, interaction, fmt.Sprintf(":arrow_forward: playback resumed :arrow_forward:"))
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())

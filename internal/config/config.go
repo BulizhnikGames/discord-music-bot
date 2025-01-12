@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+const QUEUE_SIZE = 140
 const LINK_PREFIX = "https://www.youtube.com/watch?v="
 
 var Storage string

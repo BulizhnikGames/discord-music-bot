@@ -16,15 +16,10 @@ import (
 // TODO: dj role
 // TODO: select text channel
 
-// TODO: playlist support
-// TODO: improve usage of YT API
-
-// TODO: improve getting processed song from queue (optional)
-
 func main() {
 	cfg := config.LoadConfig()
 
-	discordBot := bot.Init(cfg.BotToken, cfg.AppID, cfg.SearchLimit)
+	discordBot := bot.Init(cfg, interactions.InitialResponse)
 
 	discordBot.RegisterCommand("play", middleware.ActiveChannelOnly(interactions.PlayInteraction, false))
 	discordBot.RegisterCommand("leave", middleware.ActiveChannelOnly(interactions.LeaveInteraction, true))

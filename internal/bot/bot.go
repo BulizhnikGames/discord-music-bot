@@ -17,7 +17,7 @@ type InteractionMiddleware func(next InteractionFunc, arg any) InteractionFunc
 
 type VoiceEntity struct {
 	voiceConnection *discordgo.VoiceConnection
-	Queue           *internal.MusicQueue
+	queue           *internal.MusicQueue
 	nowPlaying      *internal.PlayingSong
 	cache           internal.AsyncMap[string, *internal.SongCache] // key is user's query for song
 	loop            int                                            // 0 - no loop, 1 - queue loop, 2 - single loop
@@ -32,13 +32,13 @@ type DiscordBot struct {
 	VoiceEntities internal.AsyncMap[string, *VoiceEntity]
 }
 
-func Init(BotToken, AppID string, searchLimit int) *DiscordBot {
-	session, err := discordgo.New("Bot " + BotToken)
+func Init(cfg config.Config, initialResp func(*DiscordBot, *discordgo.InteractionCreate)) *DiscordBot {
+	session, err := discordgo.New("Bot " + cfg.BotToken)
 	if err != nil {
 		log.Fatalf("Error creating Discord session: %s", err)
 	}
 
-	_, err = session.ApplicationCommandBulkOverwrite(AppID, "", []*discordgo.ApplicationCommand{
+	_, err = session.ApplicationCommandBulkOverwrite(cfg.AppID, "", []*discordgo.ApplicationCommand{
 		{
 			Name:        "play",
 			Description: "play YT video by name or URL",
@@ -119,7 +119,7 @@ func Init(BotToken, AppID string, searchLimit int) *DiscordBot {
 
 	bot := &DiscordBot{
 		Session:      session,
-		Youtube:      api.NewService(searchLimit),
+		Youtube:      api.NewService(cfg.SearchLimit),
 		Interactions: make(map[string]InteractionFunc),
 		VoiceEntities: internal.AsyncMap[string, *VoiceEntity]{
 			Data:  make(map[string]*VoiceEntity),
@@ -130,6 +130,7 @@ func Init(BotToken, AppID string, searchLimit int) *DiscordBot {
 	session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if handler, ok := bot.Interactions[i.ApplicationCommandData().Name]; ok {
 			go func() {
+				go initialResp(bot, i)
 				err := handler(bot, i)
 				if err != nil {
 					var logErr, userErr error

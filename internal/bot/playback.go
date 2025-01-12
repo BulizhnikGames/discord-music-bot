@@ -36,13 +36,35 @@ func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 		case <-ctx.Done():
 			log.Printf("stop signal (channel: %s, guild: %s)", voiceChat.voiceConnection.GuildID, voiceChat.voiceConnection.GuildID)
 			return
-		case <-voiceChat.Queue.NewHandled:
-			song := voiceChat.Queue.ReadHandled()
+		case <-voiceChat.queue.NewHandled:
+			song := voiceChat.queue.ReadHandled()
 			if song == nil {
 				continue
 			}
-			message := fmt.Sprintf(
-				":arrow_forward: playing song: `%s | %d:%02d` by `%s`",
+			var message string
+			if song.FilePath == "" {
+				if song.Title != "" && song.Duration != 0 && song.Author != "" {
+					message = fmt.Sprintf(
+						":x: couldn't play song `%s | %d:%02d` by `%s` :x: ",
+						song.Title,
+						song.Duration/60,
+						song.Duration%60,
+						song.Author,
+					)
+				} else {
+					message = fmt.Sprintf(
+						":x: couldn't play song `%s` :x: ",
+						song.Query,
+					)
+				}
+				err := bot.SendInChannel(voiceChat.textChannel, message)
+				if err != nil {
+					log.Printf("Couldn't send error message about song: %v", err)
+				}
+				continue
+			}
+			message = fmt.Sprintf(
+				":arrow_forward: playing song `%s | %d:%02d` by `%s`",
 				song.Title,
 				song.Duration/60,
 				song.Duration%60,
@@ -110,8 +132,8 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, song *internal.Song)
 		}
 		if voiceChat.loop == 1 {
 			// maybe consider this variant
-			//voiceChat.Queue.Write(song)
-			voiceChat.InsertQueue(song.Query)
+			//voiceChat.queue.Write(song)
+			voiceChat.InsertQueue(*song)
 		}
 	}
 

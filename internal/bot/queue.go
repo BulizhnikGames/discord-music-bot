@@ -9,15 +9,15 @@ import (
 	"os"
 )
 
-func (voiceChat *VoiceEntity) InsertQueue(query string) {
-	voiceChat.Queue.Write(internal.Song{Query: query})
+func (voiceChat *VoiceEntity) InsertQueue(song internal.Song) {
+	voiceChat.queue.Write(song)
 }
 
 func (bot *DiscordBot) ShuffleQueue(guildID string) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		voiceChat.Queue.Shuffle()
+		voiceChat.queue.Shuffle()
 		return nil
 	} else {
 		return errors.New("bot isn't in the voice chat")
@@ -42,7 +42,7 @@ func (bot *DiscordBot) ClearQueue(guildID string) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		voiceChat.Queue.Clear()
+		voiceChat.queue.Clear()
 
 		if voiceChat.nowPlaying != nil {
 			voiceChat.nowPlaying.Skip(true)
@@ -79,10 +79,10 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 				voiceChat.nowPlaying.Author,
 			)}, nil
 		}
-		res := make([]string, 0, voiceChat.Queue.Len+1)
-		for song := range voiceChat.Queue.All() {
+		res := make([]string, 0, voiceChat.queue.Len+1)
+		for song := range voiceChat.queue.Part(10) {
 			var add string
-			if song.Title != "" {
+			if song.Title != "" && song.Duration != 0 && song.Author != "" {
 				add = fmt.Sprintf(
 					"%s | %d:%02d by %s",
 					song.Title,
@@ -143,6 +143,9 @@ func (bot *DiscordBot) NowPlaying(guildID string) (*internal.Song, error) {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
+		if voiceChat.nowPlaying == nil {
+			return nil, nil
+		}
 		return voiceChat.nowPlaying.Song, nil
 	} else {
 		return nil, errors.New("bot isn't in the voice chat")
