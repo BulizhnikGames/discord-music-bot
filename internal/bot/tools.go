@@ -6,6 +6,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/bwmarrin/discordgo"
+	"github.com/redis/go-redis/v9"
 	"log"
 )
 
@@ -25,6 +26,26 @@ func (bot *DiscordBot) GetUsersVoiceChat(guildID string, user *discordgo.User) (
 func (bot *DiscordBot) SendInChannel(channelID, message string) error {
 	_, err := bot.Session.ChannelMessageSend(channelID, message)
 	return err
+}
+
+func (bot *DiscordBot) SetDJRole(guildID, id string) error {
+	return bot.db.Set(context.Background(), "dj:"+guildID, id, 0).Err()
+}
+
+func (bot *DiscordBot) DeleteDJRole(guildID string) error {
+	return bot.db.Del(context.Background(), "dj:"+guildID).Err()
+}
+
+// GetDJRole returns DJ role's id and true if server has one, empty string and false - otherwise
+func (bot *DiscordBot) GetDJRole(guildID string) (string, bool, error) {
+	res, err := bot.db.Get(context.Background(), "dj:"+guildID).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return res, true, nil
 }
 
 func (voiceChat *VoiceEntity) downloadSong(ctx context.Context, song *internal.Song) (*internal.Song, error) {

@@ -13,10 +13,18 @@ const LINK_PREFIX = "https://www.youtube.com/watch?v="
 var Storage string
 var Utils string
 
+type RedisConfig struct {
+	Url      string
+	DBid     int
+	Username string
+	Password string
+}
+
 type Config struct {
 	BotToken    string
 	AppID       string
 	SearchLimit int
+	Redis       RedisConfig
 }
 
 func LoadConfig() Config {
@@ -57,6 +65,22 @@ func LoadConfig() Config {
 	if Utils[len(Utils)-1] != '/' {
 		Utils = Utils + "/"
 	}
+
+	cfg.Redis.Url = os.Getenv("DB_URL")
+	if cfg.Redis.Url == "" {
+		log.Fatal("Redis url not found in .env")
+	}
+
+	dbIDStr := os.Getenv("DB_ID")
+	if dbIDStr == "" {
+		log.Fatal("Redis db id not found in .env")
+	}
+	if cfg.Redis.DBid, err = strconv.Atoi(dbIDStr); err != nil {
+		log.Fatalf("Error parsing redis db id to int: %v", err)
+	}
+
+	cfg.Redis.Username = os.Getenv("DB_USERNAME")
+	cfg.Redis.Password = os.Getenv("DB_PASSWORD")
 
 	return cfg
 }

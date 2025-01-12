@@ -45,3 +45,30 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
 	}
 }
+
+func NowPlayingInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
+	switch interaction.Type {
+	case discordgo.InteractionApplicationCommand:
+		song, curr, err := bot.NowPlaying(interaction.GuildID)
+		if err != nil {
+			return err
+		}
+		if song != nil {
+			message := fmt.Sprintf(
+				":musical_note:  now playing `%s | %d:%02d / %d:%02d` by `%s`  :musical_note:",
+				song.Title,
+				curr/60,
+				curr%60,
+				song.Duration/60,
+				song.Duration%60,
+				song.Author,
+			)
+			responseToInteraction(bot, interaction, message)
+		} else {
+			responseToInteraction(bot, interaction, ":mute: nothing is playing :mute:")
+		}
+		return nil
+	default:
+		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
+	}
+}

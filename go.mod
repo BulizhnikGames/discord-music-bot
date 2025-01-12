@@ -18,11 +18,14 @@ require (
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/bitly/go-simplejson v0.5.1 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/dop251/goja v0.0.0-20241024094426-79f3a7efcdbd // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-redis/redis v6.15.9+incompatible // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/google/pprof v0.0.0-20241203143554-1e3fdc7de467 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
@@ -34,6 +37,8 @@ require (
 	github.com/kkdai/youtube v1.2.4 // indirect
 	github.com/kkdai/youtube/v2 v2.10.2 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/redis/go-redis v6.15.9+incompatible // indirect
+	github.com/redis/go-redis/v9 v9.7.0 // indirect
 	github.com/vbauerster/mpb/v5 v5.4.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
 	go.opentelemetry.io/otel v1.29.0 // indirect

@@ -8,6 +8,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube/api"
 	"github.com/bwmarrin/discordgo"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
 	"sync"
@@ -31,9 +32,10 @@ type DiscordBot struct {
 	Youtube       *api.Youtube
 	Interactions  map[string]InteractionFunc
 	VoiceEntities internal.AsyncMap[string, *VoiceEntity]
+	db            *redis.Client
 }
 
-func Init(cfg config.Config, initialResp func(*DiscordBot, *discordgo.InteractionCreate)) *DiscordBot {
+func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *discordgo.InteractionCreate)) *DiscordBot {
 	session, err := discordgo.New("Bot " + cfg.BotToken)
 	if err != nil {
 		log.Fatalf("Error creating Discord session: %s", err)
@@ -55,41 +57,6 @@ func Init(cfg config.Config, initialResp func(*DiscordBot, *discordgo.Interactio
 			},
 		},
 		{
-			Name:        "leave",
-			Description: "leave voice chat",
-			Type:        discordgo.ChatApplicationCommand,
-		},
-		{
-			Name:        "clear",
-			Description: "clear playback queue",
-			Type:        discordgo.ChatApplicationCommand,
-		},
-		{
-			Name:        "stop",
-			Description: "stop playback and clear queue",
-			Type:        discordgo.ChatApplicationCommand,
-		},
-		{
-			Name:        "skip",
-			Description: "skip current song",
-			Type:        discordgo.ChatApplicationCommand,
-		},
-		{
-			Name:        "shuffle",
-			Description: "shuffle queue",
-			Type:        discordgo.ChatApplicationCommand,
-		},
-		{
-			Name:        "queue",
-			Description: "get songs in queue",
-			Type:        discordgo.ChatApplicationCommand,
-		},
-		{
-			Name:        "nowplaying",
-			Description: "get current song",
-			Type:        discordgo.ChatApplicationCommand,
-		},
-		{
 			Name:        "loop",
 			Description: "0 - no loop, 1 - loop queue, 2 - loop current song",
 			Type:        discordgo.ChatApplicationCommand,
@@ -104,15 +71,29 @@ func Init(cfg config.Config, initialResp func(*DiscordBot, *discordgo.Interactio
 			},
 		},
 		{
-			Name:        "pause",
-			Description: "pause playback",
+			Name:        "dj-mode",
+			Description: "set dj mode, only members with dj role can manipulate queue and playback",
 			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "role",
+					Description:  "dj role",
+					Type:         discordgo.ApplicationCommandOptionRole,
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
 		},
-		{
-			Name:        "resume",
-			Description: "resume playback",
-			Type:        discordgo.ChatApplicationCommand,
-		},
+		{Name: "dj-off", Description: "turn off dj-mode", Type: discordgo.ChatApplicationCommand},
+		{Name: "leave", Description: "leave voice chat", Type: discordgo.ChatApplicationCommand},
+		{Name: "clear", Description: "clear playback queue", Type: discordgo.ChatApplicationCommand},
+		{Name: "stop", Description: "stop playback and clear queue", Type: discordgo.ChatApplicationCommand},
+		{Name: "skip", Description: "skip current song", Type: discordgo.ChatApplicationCommand},
+		{Name: "shuffle", Description: "shuffle queue", Type: discordgo.ChatApplicationCommand},
+		{Name: "queue", Description: "get songs in queue", Type: discordgo.ChatApplicationCommand},
+		{Name: "nowplaying", Description: "get current song", Type: discordgo.ChatApplicationCommand},
+		{Name: "pause", Description: "pause playback", Type: discordgo.ChatApplicationCommand},
+		{Name: "resume", Description: "resume playback", Type: discordgo.ChatApplicationCommand},
 	})
 	if err != nil {
 		log.Fatalf("Error initializing application's slash interactions: %s", err)
@@ -122,6 +103,7 @@ func Init(cfg config.Config, initialResp func(*DiscordBot, *discordgo.Interactio
 		Session:      session,
 		Youtube:      api.NewService(cfg.SearchLimit),
 		Interactions: make(map[string]InteractionFunc),
+		db:           db,
 		VoiceEntities: internal.AsyncMap[string, *VoiceEntity]{
 			Data:  make(map[string]*VoiceEntity),
 			Mutex: &sync.RWMutex{},
@@ -131,7 +113,7 @@ func Init(cfg config.Config, initialResp func(*DiscordBot, *discordgo.Interactio
 	session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if handler, ok := bot.Interactions[i.ApplicationCommandData().Name]; ok {
 			go func() {
-				go initialResp(bot, i)
+				go initResp(bot, i)
 				err := handler(bot, i)
 				if err != nil {
 					var userErr, logErr error
