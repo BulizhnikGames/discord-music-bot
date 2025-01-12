@@ -55,22 +55,23 @@ func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 				}
 				continue
 			}
-			message = fmt.Sprintf(
-				":arrow_forward: playing song `%s | %d:%02d` by `%s`",
-				song.Title,
-				song.Duration/60,
-				song.Duration%60,
-				song.Author,
-			)
-			err := bot.SendInChannel(voiceChat.textChannel, message)
+			var err error
+			msg, err := voiceChat.SendPlayBackMessage(bot, *song)
 			if err != nil {
-				log.Printf("Couldn't send message about song: %v", err)
+				log.Printf("Couldn't send new playback message: %s", err.Error())
 				continue
 			}
+			if voiceChat.playbackMessage != nil {
+				err = bot.Session.ChannelMessageDelete(voiceChat.textChannel, voiceChat.playbackMessage.ID)
+				if err != nil {
+					log.Printf("Couldn't delete old playbak message: %s", err.Error())
+				}
+			}
+			voiceChat.playbackMessage = msg
 			log.Printf("Playing song %s (query %s)", song.Title, song.Query)
 			err = voiceChat.playSong(ctx, song)
 			if err != nil {
-				log.Printf("Error playing song: %v", err)
+				log.Printf("Error playing song: %s", err.Error())
 			}
 			timeout = time.NewTimer(PLAYBACK_TIMEOUT).C
 		}

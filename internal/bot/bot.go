@@ -24,6 +24,7 @@ type VoiceEntity struct {
 	cache           internal.AsyncMap[string, *internal.SongCache] // key is user's query for song
 	loop            int                                            // 0 - no loop, 1 - queue loop, 2 - single loop
 	textChannel     string
+	playbackMessage *discordgo.Message
 	stop            context.CancelFunc
 }
 
@@ -111,7 +112,18 @@ func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *disco
 	}
 
 	session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if handler, ok := bot.Interactions[i.ApplicationCommandData().Name]; ok {
+		var name string
+		switch i.Type {
+		case discordgo.InteractionApplicationCommand:
+			name = i.ApplicationCommandData().Name
+		case discordgo.InteractionApplicationCommandAutocomplete:
+			name = i.ApplicationCommandData().Name
+		case discordgo.InteractionMessageComponent:
+			name = i.MessageComponentData().CustomID
+		default:
+			name = ""
+		}
+		if handler, ok := bot.Interactions[name]; ok {
 			go func() {
 				go initResp(bot, i)
 				err := handler(bot, i)
@@ -126,7 +138,7 @@ func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *disco
 					}
 					log.Printf(
 						"Error executing interaction (%s %s): %s",
-						i.ApplicationCommandData().Name,
+						name,
 						i.Type.String(),
 						logErr.Error(),
 					)
@@ -137,7 +149,7 @@ func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *disco
 				}
 			}()
 		} else {
-			log.Printf("Error: no such command: %s", i.ApplicationCommandData().Name)
+			log.Printf("Error: no such command: %s", name)
 		}
 	})
 

@@ -11,11 +11,14 @@ import (
 	"os/signal"
 )
 
-// TODO: messages formating
+// TODO: add /help
 
-// TODO: select text channel
+// TODO: handle buttons on embeded messages
+// TODO: all responses must be embeded
+// TODO: swapping between text channels
 
-// TODO: add /help or /info
+// TODO: consider finding some tool to search videos before downloading
+// TODO: atleast fetch metadata of direct-linked videos
 
 func main() {
 	cfg := config.LoadConfig()

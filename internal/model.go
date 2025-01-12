@@ -8,12 +8,13 @@ import (
 )
 
 type Song struct {
-	Title    string
-	Author   string
-	URL      string
-	Query    string
-	FilePath string
-	Duration int
+	Title        string
+	Author       string
+	Duration     int
+	URL          string
+	ThumbnailUrl string
+	FilePath     string
+	Query        string
 }
 
 func (song *Song) Delete() {

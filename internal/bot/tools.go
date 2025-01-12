@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
@@ -80,4 +81,52 @@ func (voiceChat *VoiceEntity) downloadSong(ctx context.Context, song *internal.S
 
 func (voiceChat *VoiceEntity) GetVoiceChatID() string {
 	return voiceChat.voiceConnection.ChannelID
+}
+
+func (voiceChat *VoiceEntity) SendPlayBackMessage(bot *DiscordBot, song internal.Song) (*discordgo.Message, error) {
+	firstLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
+		voiceChat.pauseButtonJson(),
+		voiceChat.skipButtonJson(),
+		voiceChat.stopButtonJson(),
+	))
+	if err != nil {
+		return nil, err
+	}
+	secondLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
+		voiceChat.shuffleQueueJson(),
+		voiceChat.loopOptsJson(),
+	))
+	if err != nil {
+		return nil, err
+	}
+	return bot.Session.ChannelMessageSendComplex(voiceChat.textChannel,
+		&discordgo.MessageSend{
+			Embeds: []*discordgo.MessageEmbed{
+				{
+					Author: &discordgo.MessageEmbedAuthor{
+						Name:    "Now Playing",
+						IconURL: "https://github.com/BulizhnikGames/discord-music-bot/blob/master/icon.png?raw=true",
+					},
+					Title: fmt.Sprintf("%s - [%d:%02d]", song.Title, song.Duration/60, song.Duration%60),
+					URL:   song.URL,
+					Color: 2326507,
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name: song.Author,
+						},
+					},
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: song.ThumbnailUrl,
+					},
+					Footer: &discordgo.MessageEmbedFooter{
+						Text: "github.com/BulizhnikGames/discord-music-bot",
+					},
+				},
+			},
+			Components: []discordgo.MessageComponent{
+				firstLine,
+				secondLine,
+			},
+		},
+	)
 }

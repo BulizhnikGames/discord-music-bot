@@ -67,12 +67,13 @@ func Download(ctx context.Context, guildID, query string, res chan<- Result) {
 			res <- Result{nil, ctx.Err()}
 		default:
 			res <- Result{&internal.Song{
-				Title:    videoMetadata.Title,
-				Author:   videoMetadata.Uploader,
-				URL:      videoMetadata.URL,
-				Query:    query,
-				FilePath: path,
-				Duration: videoMetadata.Duration,
+				Title:        videoMetadata.Title,
+				Author:       videoMetadata.Uploader,
+				Duration:     videoMetadata.Duration,
+				URL:          videoMetadata.URL,
+				ThumbnailUrl: videoMetadata.Thumbnail,
+				FilePath:     path,
+				Query:        query,
 			}, nil}
 		}
 	}
