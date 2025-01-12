@@ -16,15 +16,7 @@ const PLAYBACK_TIMEOUT = 30 * time.Minute
 
 func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 	defer func() {
-		err := bot.LeaveVoiceChat(voiceChat.voiceConnection.GuildID)
-		if err != nil {
-			log.Printf(
-				"Couldn't leave voice chat (id: %s, guild: %s): %v",
-				voiceChat.voiceConnection.ChannelID,
-				voiceChat.voiceConnection.GuildID,
-				err,
-			)
-		}
+		_ = bot.LeaveVoiceChat(voiceChat.voiceConnection.GuildID)
 	}()
 
 	timeout := time.NewTimer(PLAYBACK_TIMEOUT).C

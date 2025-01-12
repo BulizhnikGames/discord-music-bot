@@ -20,14 +20,15 @@ type MusicQueue struct {
 	Len, Cap                                   int
 	mutex                                      *sync.RWMutex
 	WriteHandler                               func(ctx context.Context, val *Song) (*Song, error)
+	topCtx                                     context.Context
 	ctx                                        context.Context
 	stopHandlers                               context.CancelFunc
 	tryHandleSignal                            chan struct{}
 	NewHandled                                 chan struct{}
 }
 
-func CreateCycleQueue(size int) *MusicQueue {
-	ctx, cancel := context.WithCancel(context.Background())
+func CreateCycleQueue(ctx context.Context, size int) *MusicQueue {
+	lowCtx, cancel := context.WithCancel(ctx)
 	//firstNode := &node{idx: 0}
 	firstNode := &node{}
 	prevNode := firstNode
@@ -47,7 +48,8 @@ func CreateCycleQueue(size int) *MusicQueue {
 		handleNode:      firstNode,
 		Cap:             size,
 		mutex:           &sync.RWMutex{},
-		ctx:             ctx,
+		topCtx:          ctx,
+		ctx:             lowCtx,
 		stopHandlers:    cancel,
 		tryHandleSignal: make(chan struct{}, size),
 		NewHandled:      make(chan struct{}, size),
@@ -89,10 +91,16 @@ func (queue *MusicQueue) Run() {
 		select {
 		case <-queue.ctx.Done():
 			queue.mutex.Lock()
-			queue.ctx, queue.stopHandlers = context.WithCancel(context.Background())
-			queue.handleNode = queue.readNode
-			queue.mutex.Unlock()
-			queue.askHandle()
+			select {
+			case <-queue.topCtx.Done():
+				queue.mutex.Unlock()
+				return
+			default:
+				queue.ctx, queue.stopHandlers = context.WithCancel(queue.topCtx)
+				queue.handleNode = queue.readNode
+				queue.mutex.Unlock()
+				queue.askHandle()
+			}
 		case <-queue.tryHandleSignal:
 			for queue.notNilValToHandle() {
 				queue.mutex.RLock()

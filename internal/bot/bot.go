@@ -2,11 +2,12 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
+	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube/api"
 	"github.com/bwmarrin/discordgo"
-	"github.com/go-faster/errors"
 	"log"
 	"os"
 	"sync"
@@ -133,22 +134,24 @@ func Init(cfg config.Config, initialResp func(*DiscordBot, *discordgo.Interactio
 				go initialResp(bot, i)
 				err := handler(bot, i)
 				if err != nil {
-					var logErr, userErr error
-					if errors.Unwrap(err) == nil {
-						logErr = err
-						userErr = errors.New("Internal error")
+					var userErr, logErr error
+					if det, ok := err.(*errors.DetailedError); ok {
+						userErr = det.User
+						logErr = det.Log
 					} else {
-						userErr = err
-						logErr = errors.Unwrap(err)
+						logErr = err
+						userErr = errors.New("internal error")
 					}
-					log.Printf("Error executing interaction (%s %s): %v", i.ApplicationCommandData().Name, i.Type.String(), logErr)
-					_ = session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-						Type: discordgo.InteractionResponseChannelMessageWithSource,
-						Data: &discordgo.InteractionResponseData{
-							Content: userErr.Error(),
-							Flags:   discordgo.MessageFlagsEphemeral,
-						},
-					})
+					log.Printf(
+						"Error executing interaction (%s %s): %s",
+						i.ApplicationCommandData().Name,
+						i.Type.String(),
+						logErr.Error(),
+					)
+					if i.Type == discordgo.InteractionApplicationCommand {
+						resp := fmt.Sprintf(":x: %s :x:", userErr.Error())
+						_, _ = session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &resp})
+					}
 				}
 			}()
 		} else {

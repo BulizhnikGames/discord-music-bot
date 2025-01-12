@@ -3,9 +3,9 @@ package bot
 import (
 	"context"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
+	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/bwmarrin/discordgo"
-	"github.com/go-faster/errors"
 	"log"
 )
 
@@ -20,17 +20,6 @@ func (bot *DiscordBot) GetUsersVoiceChat(guildID string, user *discordgo.User) (
 		}
 	}
 	return "", errors.New("couldn't get user's voice chat")
-}
-
-func (bot *DiscordBot) StopPlayback(guildID string) error {
-	bot.VoiceEntities.Mutex.Lock()
-	defer bot.VoiceEntities.Mutex.Unlock()
-	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		voiceChat.stop()
-		return nil
-	} else {
-		return errors.Errorf("bot doesn't have active playback in guild %s", guildID)
-	}
 }
 
 func (bot *DiscordBot) SendInChannel(channelID, message string) error {
@@ -53,7 +42,7 @@ func (voiceChat *VoiceEntity) downloadSong(ctx context.Context, song *internal.S
 	select {
 	case data := <-res:
 		if data.Err != nil {
-			return nil, errors.Errorf("couldn't download song: %v", data.Err)
+			return nil, errors.Newf("couldn't download song: %v", data.Err)
 		}
 		log.Printf("Downloaded song: %v", data.Downloaded.Title)
 		voiceChat.cache.Mutex.Lock()

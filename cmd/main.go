@@ -10,7 +10,6 @@ import (
 	"os/signal"
 )
 
-// TODO: errors
 // TODO: messages formating
 
 // TODO: dj role

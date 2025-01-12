@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
-	"github.com/go-faster/errors"
+	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"log"
 	"os"
 )
@@ -20,7 +20,7 @@ func (bot *DiscordBot) ShuffleQueue(guildID string) error {
 		voiceChat.queue.Shuffle()
 		return nil
 	} else {
-		return errors.New("bot isn't in the voice chat")
+		return errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }
 
@@ -34,7 +34,7 @@ func (bot *DiscordBot) SetLoop(guildID string, loop int) error {
 		voiceChat.loop = loop
 		return nil
 	} else {
-		return errors.New("bot isn't in the voice chat")
+		return errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }
 
@@ -59,7 +59,7 @@ func (bot *DiscordBot) ClearQueue(guildID string) error {
 
 		return nil
 	} else {
-		return errors.New("bot isn't in the voice chat")
+		return errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }
 
@@ -109,7 +109,7 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 		}
 		return res, nil
 	} else {
-		return nil, errors.New("bot isn't in the voice chat")
+		return nil, errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }
 
@@ -122,7 +122,7 @@ func (bot *DiscordBot) SkipSong(guildID string) error {
 		}
 		return nil
 	} else {
-		return errors.New("bot isn't in the voice chat")
+		return errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }
 
@@ -135,7 +135,7 @@ func (bot *DiscordBot) Pause(guildID string, pause bool) error {
 		}
 		return nil
 	} else {
-		return errors.New("bot isn't in the voice chat")
+		return errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }
 
@@ -148,6 +148,6 @@ func (bot *DiscordBot) NowPlaying(guildID string) (*internal.Song, error) {
 		}
 		return voiceChat.nowPlaying.Song, nil
 	} else {
-		return nil, errors.New("bot isn't in the voice chat")
+		return nil, errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }

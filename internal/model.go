@@ -46,12 +46,6 @@ func (m *AsyncMap[K, V]) Put(k K, v V) {
 	m.Data[k] = v
 }
 
-func (m *AsyncMap[K, V]) Remove(k K) {
-	m.Mutex.Lock()
-	defer m.Mutex.Unlock()
-	delete(m.Data, k)
-}
-
 type VideoMetadata struct {
 	ID                   string      `json:"id"`
 	Title                string      `json:"title"`

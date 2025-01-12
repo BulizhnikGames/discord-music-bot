@@ -10,7 +10,7 @@ import (
 func LeaveInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 	switch interaction.Type {
 	case discordgo.InteractionApplicationCommand:
-		err := bot.StopPlayback(interaction.GuildID)
+		err := bot.LeaveVoiceChat(interaction.GuildID)
 		if err != nil {
 			return err
 		}

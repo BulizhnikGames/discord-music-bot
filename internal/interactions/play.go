@@ -5,8 +5,8 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
+	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/bwmarrin/discordgo"
-	"github.com/go-faster/errors"
 	ytsearch "github.com/kkdai/youtube/v2"
 	"log"
 	"strings"
@@ -27,7 +27,7 @@ func PlayInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCrea
 		_ = autoComplete(bot, interaction)
 		return nil
 	default:
-		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
+		return errors.Newf("unknown interaction type: %s", interaction.Type.String())
 	}
 }
 
@@ -41,7 +41,7 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 		playlist, err := client.GetPlaylist(song)
 		if err == nil {
 			if len(playlist.Videos) > config.QUEUE_SIZE {
-				return errors.New("playlist is too big")
+				return errors.New("playlist is too big").AddUser("couldn't playlist to queue, because of it's too big")
 			}
 			videos = make([]*ytsearch.PlaylistEntry, len(playlist.Videos))
 			for i, video := range playlist.Videos {
@@ -52,7 +52,7 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 
 	channelID, err := bot.GetUsersVoiceChat(interaction.GuildID, interaction.Member.User)
 	if err != nil {
-		return errors.Wrap(err, "User is not in voice chat")
+		return errors.Newf("%v", err).AddUser("you must be in voice chat")
 	}
 
 	voiceChat, err := bot.JoinVoiceChat(interaction.GuildID, channelID, interaction.ChannelID)
@@ -103,7 +103,7 @@ func autoComplete(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate)
 	} else {
 		results, err := bot.Youtube.Search(input, false)
 		if err != nil {
-			return errors.Errorf("Error getting YT videos by with name %s: %s \n", input, err)
+			return errors.Newf("Error getting YT videos by with name %s: %s \n", input, err)
 		}
 		//log.Printf("Got %v names from search", len(*results))
 		if len(results) == 0 {
@@ -126,7 +126,7 @@ func autoComplete(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate)
 		},
 	})
 	if err != nil {
-		return errors.Errorf("couldn't send play autocomplete options (%v) to user: %v", choices, err)
+		return errors.Newf("couldn't send play autocomplete options (%v) to user: %v", choices, err)
 	}
 
 	return nil
