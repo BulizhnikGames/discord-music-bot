@@ -29,7 +29,7 @@ func Download(ctx context.Context, guildID, query string, res chan<- Result) {
 		firstArg,
 		//"-N", "4",
 		"--extract-audio",
-		"--buffer-size", "65536",
+		"--buffer-size", "4096",
 		"--retries", "1",
 		"--audio-format", "opus",
 		"--no-playlist",

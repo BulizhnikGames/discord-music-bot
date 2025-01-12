@@ -36,7 +36,7 @@ func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 		case <-ctx.Done():
 			log.Printf("stop signal (channel: %s, guild: %s)", voiceChat.voiceConnection.GuildID, voiceChat.voiceConnection.GuildID)
 			return
-		default:
+		case <-voiceChat.Queue.NewHandled:
 			song := voiceChat.Queue.ReadHandled()
 			if song == nil {
 				continue

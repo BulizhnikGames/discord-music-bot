@@ -2,10 +2,8 @@ package internal
 
 import (
 	"context"
-	"fmt"
 	"iter"
 	"math/rand/v2"
-	"strings"
 	"sync"
 )
 
@@ -24,6 +22,7 @@ type MusicQueue struct {
 	ctx                                        context.Context
 	stopHandlers                               context.CancelFunc
 	tryHandleSignal                            chan struct{}
+	NewHandled                                 chan struct{}
 }
 
 func CreateCycleQueue(size int) *MusicQueue {
@@ -50,6 +49,7 @@ func CreateCycleQueue(size int) *MusicQueue {
 		ctx:             ctx,
 		stopHandlers:    cancel,
 		tryHandleSignal: make(chan struct{}, size),
+		NewHandled:      make(chan struct{}, size),
 	}
 }
 
@@ -62,6 +62,12 @@ func (queue *MusicQueue) SetHandler(handler func(ctx context.Context, val *Song)
 func (queue *MusicQueue) askHandle() {
 	go func() {
 		queue.tryHandleSignal <- struct{}{}
+	}()
+}
+
+func (queue *MusicQueue) notify() {
+	go func() {
+		queue.NewHandled <- struct{}{}
 	}()
 }
 
@@ -127,6 +133,9 @@ func (queue *MusicQueue) handleElement(ctx context.Context, listNode *node) {
 	defer queue.mutex.Unlock()
 	listNode.val = processed
 	listNode.handled = err == nil
+	if err == nil {
+		queue.notify()
+	}
 }
 
 func (queue *MusicQueue) Write(v Song) {
@@ -188,7 +197,7 @@ func (queue *MusicQueue) Shuffle() {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 	nodes := make([]*node, 0, queue.Len)
-	reader := queue.readNode
+	/*reader := queue.readNode
 	builder := strings.Builder{}
 	builder.WriteString("Queue:")
 	for reader.val != nil {
@@ -196,7 +205,7 @@ func (queue *MusicQueue) Shuffle() {
 		nodes = append(nodes, reader)
 		reader = reader.next
 	}
-	//log.Println(builder.String())
+	log.Println(builder.String())*/
 	rand.Shuffle(len(nodes), func(i, j int) {
 		tmpVal, tmpHandled := nodes[i].val, nodes[i].handled
 		nodes[i].val = nodes[j].val
