@@ -24,8 +24,10 @@ type VoiceEntity struct {
 	cache           internal.AsyncMap[string, *internal.SongCache] // key is user's query for song
 	loop            int                                            // 0 - no loop, 1 - queue loop, 2 - single loop
 	textChannel     string
-	playbackMessage *discordgo.Message
-	stop            context.CancelFunc
+	playbackContext context.Context
+	forceStop       func(playbackText string) // Cancel func for playback context, sets playback message's text ot arg
+	leave           context.CancelFunc        // Cancels main context of voice conn
+	mutex           *sync.RWMutex
 }
 
 type DiscordBot struct {
@@ -88,7 +90,7 @@ func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *disco
 		{Name: "dj-off", Description: "turn off dj-mode", Type: discordgo.ChatApplicationCommand},
 		{Name: "leave", Description: "leave voice chat", Type: discordgo.ChatApplicationCommand},
 		{Name: "clear", Description: "clear playback queue", Type: discordgo.ChatApplicationCommand},
-		{Name: "stop", Description: "stop playback and clear queue", Type: discordgo.ChatApplicationCommand},
+		{Name: "stop", Description: "clear playback queue", Type: discordgo.ChatApplicationCommand},
 		{Name: "skip", Description: "skip current song", Type: discordgo.ChatApplicationCommand},
 		{Name: "shuffle", Description: "shuffle queue", Type: discordgo.ChatApplicationCommand},
 		{Name: "queue", Description: "get songs in queue", Type: discordgo.ChatApplicationCommand},
@@ -143,8 +145,21 @@ func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *disco
 						logErr.Error(),
 					)
 					if i.Type == discordgo.InteractionApplicationCommand {
-						resp := fmt.Sprintf(":x: %s :x:", userErr.Error())
-						_, _ = session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &resp})
+						resp := fmt.Sprintf("❌  %s  ❌", userErr.Error())
+						_, _ = session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+							Embeds: &[]*discordgo.MessageEmbed{
+								{
+									Author: &discordgo.MessageEmbedAuthor{
+										Name:    resp,
+										IconURL: "https://github.com/BulizhnikGames/discord-music-bot/blob/master/icon.png?raw=true",
+									},
+									Color: 2326507,
+									Footer: &discordgo.MessageEmbedFooter{
+										Text: "github.com/BulizhnikGames/discord-music-bot",
+									},
+								},
+							},
+						})
 					}
 				}
 			}()

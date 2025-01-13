@@ -16,7 +16,7 @@ func DJModeInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCr
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":drum:  DJ role is set to <@&%s>  :drum:", role.ID))
+		responseToInteraction(bot, interaction, fmt.Sprintf("🥁  DJ role is set to <@&%s>  🥁", role.ID))
 		return nil
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		guildID := interaction.GuildID
@@ -58,7 +58,7 @@ func NoDJInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCrea
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf(":drum:  DJ role unseted  :drum:"))
+		responseToInteraction(bot, interaction, fmt.Sprintf("🥁  DJ role unseted  🥁"))
 		return nil
 	default:
 		return errors.Newf("unknown interaction type: %s", interaction.Type.String())

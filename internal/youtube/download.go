@@ -7,7 +7,6 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/go-faster/errors"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -42,7 +41,7 @@ func Download(ctx context.Context, guildID, query string, res chan<- Result) {
 		"--no-color",
 		"--no-check-formats",
 	}
-	log.Printf("yt-dlp %s", strings.Join(args, " "))
+	//log.Printf("yt-dlp %s", strings.Join(args, " "))
 	var commandPath string
 	if config.Utils == "" {
 		commandPath = "yt-dlp"

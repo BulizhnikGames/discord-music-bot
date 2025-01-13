@@ -35,10 +35,13 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 	data := interaction.ApplicationCommandData()
 	song := data.Options[0].StringValue()
 
+	var playlist *ytsearch.Playlist
 	var videos []*ytsearch.PlaylistEntry
+	var metadata *ytsearch.Video
+	var err error
 	if strings.Contains(song, config.LINK_PREFIX) {
 		client := ytsearch.Client{}
-		playlist, err := client.GetPlaylist(song)
+		playlist, err = client.GetPlaylist(song)
 		if err == nil {
 			if len(playlist.Videos) > config.QUEUE_SIZE {
 				return errors.New("playlist is too big").AddUser("couldn't playlist to queue, because of it's too big")
@@ -46,6 +49,11 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 			videos = make([]*ytsearch.PlaylistEntry, len(playlist.Videos))
 			for i, video := range playlist.Videos {
 				videos[i] = video
+			}
+		} else {
+			metadata, err = client.GetVideo(song)
+			if err != nil {
+				log.Printf("Error getting video metadata: %s", err)
 			}
 		}
 	}
@@ -55,13 +63,24 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 		return errors.Newf("%v", err).AddUser("you must be in voice chat")
 	}
 
+	//log.Printf("getting voice chat")
 	voiceChat, err := bot.JoinVoiceChat(interaction.GuildID, channelID, interaction.ChannelID)
 	if err != nil {
 		return err
 	}
+	//log.Printf("got voice chat")
 
 	if len(videos) == 0 {
-		voiceChat.InsertQueue(internal.Song{Query: song})
+		if metadata == nil {
+			voiceChat.InsertQueue(internal.Song{Query: song})
+		} else {
+			voiceChat.InsertQueue(internal.Song{
+				Title:    metadata.Title,
+				Author:   metadata.Author,
+				Query:    song,
+				Duration: int(metadata.Duration / time.Second),
+			})
+		}
 	} else {
 		go func() {
 			log.Printf("!")
@@ -76,13 +95,59 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 		}()
 	}
 
-	var message string
 	if len(videos) == 0 {
-		message = fmt.Sprintf(":white_check_mark: added song to queue: %s", song)
+		if metadata == nil {
+			responseToInteraction(bot, interaction, "✅  added to queue  ✅", song)
+		} else {
+			title := fmt.Sprintf(
+				"%s - [%d:%02d]",
+				metadata.Title,
+				int(metadata.Duration/time.Second)/60,
+				int(metadata.Duration/time.Second)%60,
+			)
+			if len(metadata.Thumbnails) == 0 {
+				responseToInteraction(
+					bot,
+					interaction,
+					"✅  added to queue  ✅",
+					title,
+					song,
+					metadata.Author,
+				)
+			} else {
+				responseToInteraction(
+					bot,
+					interaction,
+					"✅  added to queue  ✅",
+					title,
+					song,
+					metadata.Author,
+					metadata.Thumbnails[0].URL,
+				)
+			}
+		}
 	} else {
-		message = fmt.Sprintf(":white_check_mark: added playlist to queue: %s", song)
+		if len(videos[0].Thumbnails) == 0 {
+			responseToInteraction(
+				bot,
+				interaction,
+				"✅  added to queue  ✅",
+				playlist.Title,
+				song,
+				playlist.Author,
+			)
+		} else {
+			responseToInteraction(
+				bot,
+				interaction,
+				"✅  added to queue  ✅",
+				playlist.Title,
+				song,
+				playlist.Author,
+				videos[0].Thumbnails[0].URL,
+			)
+		}
 	}
-	responseToInteraction(bot, interaction, message)
 
 	return nil
 }

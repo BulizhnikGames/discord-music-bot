@@ -13,12 +13,11 @@ import (
 
 // TODO: add /help
 
-// TODO: handle buttons on embeded messages
-// TODO: all responses must be embeded
 // TODO: swapping between text channels
 
 // TODO: consider finding some tool to search videos before downloading
-// TODO: atleast fetch metadata of direct-linked videos
+
+// TODO: maybe handle commands from single guild NOT in parallel
 
 func main() {
 	cfg := config.LoadConfig()
@@ -57,6 +56,10 @@ func main() {
 	discordBot.RegisterCommand("resume", djMustInChannel(interactions.ResumeInteraction))
 	discordBot.RegisterCommand("dj-mode", middleware.AdminOnly(interactions.DJModeInteraction))
 	discordBot.RegisterCommand("dj-off", middleware.AdminOnly(interactions.NoDJInteraction))
+
+	discordBot.RegisterCommand("loop0", djMustInChannel(interactions.Loop0))
+	discordBot.RegisterCommand("loop1", djMustInChannel(interactions.Loop1))
+	discordBot.RegisterCommand("loop2", djMustInChannel(interactions.Loop2))
 
 	go discordBot.Run()
 

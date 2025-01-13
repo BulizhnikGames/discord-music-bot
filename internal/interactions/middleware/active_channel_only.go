@@ -8,7 +8,7 @@ import (
 
 func ActiveChannelOnly(next bot.InteractionFunc, mustBeInChannel any) bot.InteractionFunc {
 	return func(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
-		if interaction.Type == discordgo.InteractionApplicationCommand {
+		if interaction.Type == discordgo.InteractionApplicationCommand || interaction.Type == discordgo.InteractionMessageComponent {
 			guildID := interaction.GuildID
 			bot.VoiceEntities.Mutex.RLock()
 			voiceChat, ok := bot.VoiceEntities.Data[guildID]

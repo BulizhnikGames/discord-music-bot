@@ -18,7 +18,7 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 			return err
 		}
 		if len(queue) == 0 {
-			responseToInteraction(bot, interaction, ":musical_note:  playback queue is empty  :musical_note:")
+			responseToInteraction(bot, interaction, "🎵  playback queue is empty  🎵")
 			return nil
 		}
 		maxLength := 0
@@ -26,7 +26,7 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 			maxLength = max(maxLength, utf8.RuneCountInString(song)+utf8.RuneCountInString(strconv.Itoa(i))+2)
 		}
 		message := strings.Builder{}
-		message.WriteString(":musical_note:  playback queue  :musical_note:\n")
+		message.WriteString("🎵  playback queue  🎵\n")
 		for i, song := range queue {
 			message.WriteRune('`')
 			message.WriteString(fmt.Sprintf("%d. %s", i+1, song))
@@ -55,7 +55,7 @@ func NowPlayingInteraction(bot *bot.DiscordBot, interaction *discordgo.Interacti
 		}
 		if song != nil {
 			message := fmt.Sprintf(
-				":musical_note:  now playing `%s | %d:%02d / %d:%02d` by `%s`  :musical_note:",
+				"🎵  now playing `%s | %d:%02d / %d:%02d` by `%s`  🎵",
 				song.Title,
 				curr/60,
 				curr%60,
@@ -65,7 +65,7 @@ func NowPlayingInteraction(bot *bot.DiscordBot, interaction *discordgo.Interacti
 			)
 			responseToInteraction(bot, interaction, message)
 		} else {
-			responseToInteraction(bot, interaction, ":mute: nothing is playing :mute:")
+			responseToInteraction(bot, interaction, "🔇  nothing is playing  🔇")
 		}
 		return nil
 	default:

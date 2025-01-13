@@ -19,22 +19,11 @@ func (voiceChat *VoiceEntity) constructJsonLine(comps ...string) []byte {
 }
 
 func (voiceChat *VoiceEntity) pauseButtonJson() string {
-	pause := true
+	pause := false
 	if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.Stream != nil {
 		pause = voiceChat.nowPlaying.Stream.Paused()
 	}
 	if pause {
-		return `{
-          "custom_id": "pause",
-          "type": 2,
-          "style": 2,
-          "label": "Pause",
-          "emoji": {
-            "name": "⏸️",
-            "animated": false
-          }
-        }`
-	} else {
 		return `{
           "custom_id": "resume",
           "type": 2,
@@ -42,6 +31,17 @@ func (voiceChat *VoiceEntity) pauseButtonJson() string {
           "label": "Resume",
           "emoji": {
             "name": "▶️",
+            "animated": false
+          }
+        }`
+	} else {
+		return `{
+          "custom_id": "pause",
+          "type": 2,
+          "style": 2,
+          "label": "Pause",
+          "emoji": {
+            "name": "⏸️",
             "animated": false
           }
         }`

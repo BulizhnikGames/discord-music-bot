@@ -8,7 +8,7 @@ import (
 
 func DJOrAdminOnly(next bot.InteractionFunc) bot.InteractionFunc {
 	return func(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
-		if interaction.Type == discordgo.InteractionApplicationCommand {
+		if interaction.Type == discordgo.InteractionApplicationCommand || interaction.Type == discordgo.InteractionMessageComponent {
 			if interaction.Member.Permissions&AdminPermissions == AdminPermissions {
 				return next(bot, interaction)
 			} else {

@@ -41,13 +41,14 @@ func (bot *DiscordBot) JoinVoiceChat(guildID, voiceChannel, textChannel string) 
 		voiceConnection: voiceData,
 		queue:           queue,
 		textChannel:     textChannel,
+		mutex:           &sync.RWMutex{},
 		cache: internal.AsyncMap[string, *internal.SongCache]{
 			Data:  make(map[string]*internal.SongCache),
 			Mutex: &sync.RWMutex{},
 		},
 	}
 	queue.SetHandler(voiceChat.downloadSong)
-	voiceChat.stop = stop
+	voiceChat.leave = stop
 
 	bot.VoiceEntities.Put(guildID, voiceChat)
 
@@ -62,7 +63,7 @@ func (bot *DiscordBot) LeaveVoiceChat(guildID string) error {
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
 		voiceChat.queue.Clear()
 		voiceChat.loop = 0
-		voiceChat.stop()
+		voiceChat.leave()
 		err := voiceChat.voiceConnection.Disconnect()
 		if err != nil {
 			return err

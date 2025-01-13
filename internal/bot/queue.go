@@ -32,22 +32,22 @@ func (bot *DiscordBot) SetLoop(guildID string, loop int) error {
 		if loop < 0 || loop > 2 {
 			loop = 0
 		}
+		voiceChat.mutex.Lock()
 		voiceChat.loop = loop
+		voiceChat.mutex.Unlock()
 		return nil
 	} else {
 		return errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
 	}
 }
 
-func (bot *DiscordBot) ClearQueue(guildID string) error {
+func (bot *DiscordBot) ClearQueue(guildID string, playbackText string) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
 		voiceChat.queue.Clear()
 
-		if voiceChat.nowPlaying != nil {
-			voiceChat.nowPlaying.Skip(true)
-		}
+		voiceChat.forceStop(playbackText)
 
 		voiceChat.cache.Mutex.Lock()
 		clear(voiceChat.cache.Data)
@@ -68,16 +68,19 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		if voiceChat.loop == 2 {
-			if voiceChat.nowPlaying == nil {
+		voiceChat.mutex.RLock()
+		loop, nowPlaying := voiceChat.loop, voiceChat.nowPlaying
+		voiceChat.mutex.RUnlock()
+		if loop == 2 {
+			if nowPlaying == nil {
 				return []string{}, nil
 			}
 			return []string{fmt.Sprintf(
 				"%s | %d:%02d by %s",
-				voiceChat.nowPlaying.Title,
-				voiceChat.nowPlaying.Duration/60,
-				voiceChat.nowPlaying.Duration%60,
-				voiceChat.nowPlaying.Author,
+				nowPlaying.Title,
+				nowPlaying.Duration/60,
+				nowPlaying.Duration%60,
+				nowPlaying.Author,
 			)}, nil
 		}
 		res := make([]string, 0, voiceChat.queue.Len+1)
@@ -96,15 +99,15 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 			}
 			res = append(res, add)
 		}
-		if voiceChat.loop == 1 && voiceChat.nowPlaying != nil {
+		if loop == 1 && nowPlaying != nil {
 			res = append(
 				res,
 				fmt.Sprintf(
 					"%s | %d:%02d by %s",
-					voiceChat.nowPlaying.Title,
-					voiceChat.nowPlaying.Duration/60,
-					voiceChat.nowPlaying.Duration%60,
-					voiceChat.nowPlaying.Author,
+					nowPlaying.Title,
+					nowPlaying.Duration/60,
+					nowPlaying.Duration%60,
+					nowPlaying.Author,
 				),
 			)
 		}
@@ -114,13 +117,18 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 	}
 }
 
-func (bot *DiscordBot) SkipSong(guildID string) error {
+func (bot *DiscordBot) SkipSong(guildID string, playbackText string) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
+		voiceChat.mutex.RLock()
 		if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.Skip != nil {
-			voiceChat.nowPlaying.Skip(false)
+			skip := voiceChat.nowPlaying.Skip
+			voiceChat.mutex.RUnlock()
+			skip(playbackText)
+			return nil
 		}
+		voiceChat.mutex.RUnlock()
 		return nil
 	} else {
 		return errors.New("Bot isn't in the voice chat").AddUser("Bot isn't in the voice chat")
@@ -131,6 +139,8 @@ func (bot *DiscordBot) Pause(guildID string, pause bool) error {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
+		voiceChat.mutex.RLock()
+		defer voiceChat.mutex.RUnlock()
 		if voiceChat.nowPlaying != nil && &voiceChat.nowPlaying.Stream != nil {
 			voiceChat.nowPlaying.Stream.SetPaused(pause)
 		}
@@ -144,10 +154,9 @@ func (bot *DiscordBot) NowPlaying(guildID string) (*internal.Song, int, error) {
 	bot.VoiceEntities.Mutex.RLock()
 	defer bot.VoiceEntities.Mutex.RUnlock()
 	if voiceChat, ok := bot.VoiceEntities.Data[guildID]; ok {
-		if voiceChat.nowPlaying == nil {
-			return nil, 0, nil
-		}
-		if voiceChat.nowPlaying.Stream == nil {
+		voiceChat.mutex.RLock()
+		defer voiceChat.mutex.RUnlock()
+		if voiceChat.nowPlaying == nil || voiceChat.nowPlaying.Stream == nil {
 			return nil, 0, nil
 		}
 		return voiceChat.nowPlaying.Song, int(voiceChat.nowPlaying.Stream.PlaybackPosition() / time.Second), nil

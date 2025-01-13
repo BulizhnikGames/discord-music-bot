@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/bwmarrin/discordgo"
 	"github.com/jogramming/dca"
 	"log"
 	"os"
@@ -31,9 +32,11 @@ type SongCache struct {
 }
 
 type PlayingSong struct {
-	Skip   func(bool)
-	Stream *dca.StreamingSession
+	Skip    func(playbackText string) // Skip playing song
+	Stream  *dca.StreamingSession
+	Message *discordgo.Message
 	*Song
+	EncodeSession *dca.EncodeSession
 }
 
 type AsyncMap[K comparable, V any] struct {

@@ -1,7 +1,6 @@
 package interactions
 
 import (
-	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-faster/errors"
@@ -17,14 +16,15 @@ func LoopInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCrea
 		}
 		switch loop {
 		case 0:
-			responseToInteraction(bot, interaction, fmt.Sprintf(":ballot_box_with_check:  looping disabled  :ballot_box_with_check:"))
+			responseToInteraction(bot, interaction, "↪️  looping disabled  ↪️")
 		case 1:
-			responseToInteraction(bot, interaction, fmt.Sprintf(":repeat:  looping over queue  :repeat:"))
+			responseToInteraction(bot, interaction, "🔁  looping over queue  🔁")
 		case 2:
-			responseToInteraction(bot, interaction, fmt.Sprintf(":repeat_one:  looping over song  :repeat_one:"))
+			responseToInteraction(bot, interaction, "🔂  looping over song  🔂")
 		default:
-			responseToInteraction(bot, interaction, fmt.Sprintf(":ballot_box_with_check:  looping disabled  :ballot_box_with_check:"))
+			responseToInteraction(bot, interaction, "↪️  looping disabled  ↪️")
 		}
+		go bot.TryRegenPlaybackMessage(interaction.GuildID)
 		return nil
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		err := bot.Session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
@@ -49,6 +49,48 @@ func LoopInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCrea
 		if err != nil {
 			return errors.Errorf("couldn't send loop autocomplete options to user: %v", err)
 		}
+		return nil
+	default:
+		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
+	}
+}
+
+func Loop0(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
+	switch interaction.Type {
+	case discordgo.InteractionMessageComponent:
+		err := bot.SetLoop(interaction.GuildID, 0)
+		if err != nil {
+			return err
+		}
+		bot.TryRegenPlaybackMessage(interaction.GuildID)
+		return nil
+	default:
+		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
+	}
+}
+
+func Loop1(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
+	switch interaction.Type {
+	case discordgo.InteractionMessageComponent:
+		err := bot.SetLoop(interaction.GuildID, 1)
+		if err != nil {
+			return err
+		}
+		bot.TryRegenPlaybackMessage(interaction.GuildID)
+		return nil
+	default:
+		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
+	}
+}
+
+func Loop2(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
+	switch interaction.Type {
+	case discordgo.InteractionMessageComponent:
+		err := bot.SetLoop(interaction.GuildID, 2)
+		if err != nil {
+			return err
+		}
+		bot.TryRegenPlaybackMessage(interaction.GuildID)
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
