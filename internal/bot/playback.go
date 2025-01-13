@@ -384,11 +384,10 @@ func (voiceChat *VoiceEntity) DeletePlaybackMessage(session *discordgo.Session) 
 
 func (voiceChat *VoiceEntity) SendErrorPlaybackMessage(session *discordgo.Session, song internal.Song) {
 	var message string
-	if song.Title != "" && song.Author != "" {
+	if song.Title != "" {
 		message = fmt.Sprintf(
-			"❌  couldn't play song %s by %s  ❌",
+			"❌  couldn't play song %s  ❌",
 			song.Title,
-			song.Author,
 		)
 	} else {
 		message = fmt.Sprintf(

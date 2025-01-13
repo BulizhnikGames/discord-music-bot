@@ -20,8 +20,17 @@ func ShuffleInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionC
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, "🔀  shuffled  🔀")
-		return nil
+		_, err = bot.Session.ChannelMessageSendEmbed(interaction.ChannelID, &discordgo.MessageEmbed{
+			Author: &discordgo.MessageEmbedAuthor{
+				Name:    "🔀  shuffled  🔀",
+				IconURL: bot.Session.State.User.AvatarURL("64x64"),
+			},
+			Color: 2326507,
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: "github.com/BulizhnikGames/discord-music-bot",
+			},
+		})
+		return err
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
 	}

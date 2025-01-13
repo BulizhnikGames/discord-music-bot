@@ -83,7 +83,6 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 		}
 	} else {
 		go func() {
-			log.Printf("!")
 			for _, video := range videos {
 				voiceChat.InsertQueue(internal.Song{
 					Title:    video.Title,
@@ -127,12 +126,16 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 			}
 		}
 	} else {
+		var title = song
+		if playlist.Title != "" {
+			title = playlist.Title
+		}
 		if len(videos[0].Thumbnails) == 0 {
 			responseToInteraction(
 				bot,
 				interaction,
 				"✅  added to queue  ✅",
-				playlist.Title,
+				title,
 				song,
 				playlist.Author,
 			)
@@ -141,7 +144,7 @@ func play(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
 				bot,
 				interaction,
 				"✅  added to queue  ✅",
-				playlist.Title,
+				title,
 				song,
 				playlist.Author,
 				videos[0].Thumbnails[0].URL,

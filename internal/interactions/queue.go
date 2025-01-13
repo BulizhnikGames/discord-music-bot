@@ -5,9 +5,6 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-faster/errors"
-	"strconv"
-	"strings"
-	"unicode/utf8"
 )
 
 func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
@@ -21,25 +18,12 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 			responseToInteraction(bot, interaction, "🎵  playback queue is empty  🎵")
 			return nil
 		}
-		maxLength := 0
+		resp := make([]string, 1, len(queue)+1)
+		resp[0] = "🎵  playback queue  🎵"
 		for i, song := range queue {
-			maxLength = max(maxLength, utf8.RuneCountInString(song)+utf8.RuneCountInString(strconv.Itoa(i))+2)
+			resp = append(resp, fmt.Sprintf("%d. %s", i, song))
 		}
-		message := strings.Builder{}
-		message.WriteString("🎵  playback queue  🎵\n")
-		for i, song := range queue {
-			message.WriteRune('`')
-			message.WriteString(fmt.Sprintf("%d. %s", i+1, song))
-			diff := maxLength - (utf8.RuneCountInString(song) + utf8.RuneCountInString(strconv.Itoa(i)) + 2)
-			for j := 0; j < diff; j++ {
-				message.WriteRune(' ')
-			}
-			message.WriteRune('`')
-			if i != len(queue)-1 {
-				message.WriteString("\n")
-			}
-		}
-		responseToInteraction(bot, interaction, message.String())
+		responseToInteractionWithList(bot, interaction, resp...)
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
