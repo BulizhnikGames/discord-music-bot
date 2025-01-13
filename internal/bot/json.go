@@ -19,6 +19,8 @@ func (voiceChat *VoiceEntity) constructJsonLine(comps ...string) []byte {
 }
 
 func (voiceChat *VoiceEntity) pauseButtonJson() string {
+	voiceChat.mutex.RLock()
+	defer voiceChat.mutex.RUnlock()
 	pause := false
 	if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.Stream != nil {
 		pause = voiceChat.nowPlaying.Stream.Paused()
@@ -49,6 +51,8 @@ func (voiceChat *VoiceEntity) pauseButtonJson() string {
 }
 
 func (voiceChat *VoiceEntity) skipButtonJson() string {
+	voiceChat.mutex.RLock()
+	defer voiceChat.mutex.RUnlock()
 	return `{
           "custom_id": "skip",
           "type": 2,
@@ -62,6 +66,8 @@ func (voiceChat *VoiceEntity) skipButtonJson() string {
 }
 
 func (voiceChat *VoiceEntity) stopButtonJson() string {
+	voiceChat.mutex.RLock()
+	defer voiceChat.mutex.RUnlock()
 	return `{
           "custom_id": "clear",
           "type": 2,
@@ -75,6 +81,8 @@ func (voiceChat *VoiceEntity) stopButtonJson() string {
 }
 
 func (voiceChat *VoiceEntity) shuffleQueueJson() string {
+	voiceChat.mutex.RLock()
+	defer voiceChat.mutex.RUnlock()
 	return `{
           "custom_id": "shuffle",
           "type": 2,
@@ -88,6 +96,8 @@ func (voiceChat *VoiceEntity) shuffleQueueJson() string {
 }
 
 func (voiceChat *VoiceEntity) loopOptsJson() string {
+	voiceChat.mutex.RLock()
+	defer voiceChat.mutex.RUnlock()
 	switch voiceChat.loop {
 	case 0:
 		return `{
