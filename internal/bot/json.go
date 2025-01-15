@@ -18,7 +18,7 @@ func (voiceChat *VoiceEntity) constructJsonLine(comps ...string) []byte {
 	return []byte(res.String())
 }
 
-func (voiceChat *VoiceEntity) pauseButtonJson() string {
+func (voiceChat *VoiceEntity) pauseButtonJson(sessionID string) string {
 	voiceChat.mutex.RLock()
 	defer voiceChat.mutex.RUnlock()
 	pause := false
@@ -27,7 +27,7 @@ func (voiceChat *VoiceEntity) pauseButtonJson() string {
 	}
 	if pause {
 		return `{
-          "custom_id": "resume",
+          "custom_id": "` + sessionID + `:resume",
           "type": 2,
           "style": 3,
           "label": "Resume",
@@ -38,7 +38,7 @@ func (voiceChat *VoiceEntity) pauseButtonJson() string {
         }`
 	} else {
 		return `{
-          "custom_id": "pause",
+          "custom_id": "` + sessionID + `:pause",
           "type": 2,
           "style": 2,
           "label": "Pause",
@@ -50,11 +50,11 @@ func (voiceChat *VoiceEntity) pauseButtonJson() string {
 	}
 }
 
-func (voiceChat *VoiceEntity) skipButtonJson() string {
+func (voiceChat *VoiceEntity) skipButtonJson(sessionID string) string {
 	voiceChat.mutex.RLock()
 	defer voiceChat.mutex.RUnlock()
 	return `{
-          "custom_id": "skip",
+          "custom_id": "` + sessionID + `:skip",
           "type": 2,
           "style": 1,
           "label": "Skip",
@@ -65,11 +65,11 @@ func (voiceChat *VoiceEntity) skipButtonJson() string {
         }`
 }
 
-func (voiceChat *VoiceEntity) stopButtonJson() string {
+func (voiceChat *VoiceEntity) stopButtonJson(sessionID string) string {
 	voiceChat.mutex.RLock()
 	defer voiceChat.mutex.RUnlock()
 	return `{
-          "custom_id": "clear",
+          "custom_id": "` + sessionID + `:clear",
           "type": 2,
           "style": 4,
           "label": "Stop",
@@ -80,11 +80,11 @@ func (voiceChat *VoiceEntity) stopButtonJson() string {
         }`
 }
 
-func (voiceChat *VoiceEntity) shuffleQueueJson() string {
+func (voiceChat *VoiceEntity) shuffleQueueJson(sessionID string) string {
 	voiceChat.mutex.RLock()
 	defer voiceChat.mutex.RUnlock()
 	return `{
-          "custom_id": "shuffle",
+          "custom_id": "` + sessionID + `:shuffle",
           "type": 2,
           "style": 2,
           "label": "Shuffle queue",
@@ -95,13 +95,13 @@ func (voiceChat *VoiceEntity) shuffleQueueJson() string {
         }`
 }
 
-func (voiceChat *VoiceEntity) loopOptsJson() string {
+func (voiceChat *VoiceEntity) loopOptsJson(sessionID string) string {
 	voiceChat.mutex.RLock()
 	defer voiceChat.mutex.RUnlock()
 	switch voiceChat.loop {
 	case 0:
 		return `{
-          "custom_id": "loop1",
+          "custom_id": "` + sessionID + `:loop1",
           "type": 2,
           "style": 2,
           "label": "Loop Queue",
@@ -112,7 +112,7 @@ func (voiceChat *VoiceEntity) loopOptsJson() string {
         }`
 	case 1:
 		return `{
-          "custom_id": "loop2",
+          "custom_id": "` + sessionID + `:loop2",
           "type": 2,
           "style": 2,
           "label": "Loop Song",
@@ -123,7 +123,7 @@ func (voiceChat *VoiceEntity) loopOptsJson() string {
         }`
 	case 2:
 		return `{
-          "custom_id": "loop0",
+          "custom_id": "` + sessionID + `:loop0",
           "type": 2,
           "style": 2,
           "label": "No Loop",
@@ -134,7 +134,7 @@ func (voiceChat *VoiceEntity) loopOptsJson() string {
         }`
 	default:
 		return `{
-          "custom_id": "loop1",
+          "custom_id": "` + sessionID + `:loop1",
           "type": 2,
           "style": 2,
           "label": "Loop Queue",

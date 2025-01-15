@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
@@ -77,9 +78,15 @@ func (bot *DiscordBot) GetQueue(guildID string) ([]string, error) {
 			return []string{nowPlaying.Title}, nil
 		}
 		res := make([]string, 0, voiceChat.queue.Len+1)
-		for song := range voiceChat.queue.Part(10) {
+		for song := range voiceChat.queue.All() {
 			if song.Title != "" && song.Duration != 0 && song.Author != "" {
-				res = append(res, song.Title)
+				res = append(res, fmt.Sprintf(
+					"%s - [%d-%02d] by %s",
+					song.Title,
+					song.Duration/60,
+					song.Duration%60,
+					song.Author,
+				))
 			} else {
 				res = append(res, song.Query)
 			}

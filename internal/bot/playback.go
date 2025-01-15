@@ -189,17 +189,17 @@ func (voiceChat *VoiceEntity) NewPlaybackMessage(session *discordgo.Session) err
 	song := voiceChat.nowPlaying.Song
 
 	firstLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
-		voiceChat.pauseButtonJson(),
-		voiceChat.skipButtonJson(),
-		voiceChat.stopButtonJson(),
+		voiceChat.pauseButtonJson(session.State.SessionID),
+		voiceChat.skipButtonJson(session.State.SessionID),
+		voiceChat.stopButtonJson(session.State.SessionID),
 	))
 	if err != nil {
 		return err
 	}
 
 	secondLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
-		voiceChat.shuffleQueueJson(),
-		voiceChat.loopOptsJson(),
+		voiceChat.shuffleQueueJson(session.State.SessionID),
+		voiceChat.loopOptsJson(session.State.SessionID),
 	))
 	if err != nil {
 		return err
@@ -274,16 +274,16 @@ func (voiceChat *VoiceEntity) TryRegenPlaybackMessage(session *discordgo.Session
 	} else {
 		//log.Printf(id)
 		firstLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
-			voiceChat.pauseButtonJson(),
-			voiceChat.skipButtonJson(),
-			voiceChat.stopButtonJson(),
+			voiceChat.pauseButtonJson(session.State.SessionID),
+			voiceChat.skipButtonJson(session.State.SessionID),
+			voiceChat.stopButtonJson(session.State.SessionID),
 		))
 		if err != nil {
 			return
 		}
 		secondLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
-			voiceChat.shuffleQueueJson(),
-			voiceChat.loopOptsJson(),
+			voiceChat.shuffleQueueJson(session.State.SessionID),
+			voiceChat.loopOptsJson(session.State.SessionID),
 		))
 		if err != nil {
 			return

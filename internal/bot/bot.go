@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -125,6 +126,13 @@ func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *disco
 		default:
 			name = ""
 		}
+		if idx := strings.Index(name, ":"); idx != -1 {
+			if name[:idx] == session.State.SessionID {
+				name = name[idx+1:]
+			} else {
+				name = ""
+			}
+		}
 		if handler, ok := bot.Interactions[name]; ok {
 			go func() {
 				go initResp(bot, i)
@@ -151,7 +159,7 @@ func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *disco
 								{
 									Author: &discordgo.MessageEmbedAuthor{
 										Name:    resp,
-										IconURL: "https://github.com/BulizhnikGames/discord-music-bot/blob/master/icon.png?raw=true",
+										IconURL: i.User.AvatarURL("64x64"),
 									},
 									Color: 2326507,
 									Footer: &discordgo.MessageEmbedFooter{

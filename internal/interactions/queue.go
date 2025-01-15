@@ -21,7 +21,7 @@ func QueueInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCre
 		resp := make([]string, 1, len(queue)+1)
 		resp[0] = "🎵  playback queue  🎵"
 		for i, song := range queue {
-			resp = append(resp, fmt.Sprintf("%d. %s", i, song))
+			resp = append(resp, fmt.Sprintf("%d. %s", i+1, song))
 		}
 		responseToInteractionWithList(bot, interaction, resp...)
 		return nil

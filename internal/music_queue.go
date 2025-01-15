@@ -189,17 +189,15 @@ func (queue *MusicQueue) Clear() {
 	queue.Len = 0
 }
 
-func (queue *MusicQueue) Part(limit int) iter.Seq[Song] {
+func (queue *MusicQueue) All() iter.Seq[Song] {
 	return func(yield func(v Song) bool) {
 		queue.mutex.Lock()
 		defer queue.mutex.Unlock()
 		reader := *queue.readNode
-		for i := 0; i < limit && reader.val != nil; i++ {
+		for reader.val != nil {
 			if reader.handled {
 				if reader.val.FilePath != "" {
 					yield(*reader.val)
-				} else {
-					i--
 				}
 			} else {
 				yield(*reader.val)
