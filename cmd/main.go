@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot"
+	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions"
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions/middleware"
+	"github.com/BulizhnikGames/discord-music-bot/internal/youtube/api"
 	"github.com/redis/go-redis/v9"
 	"os"
 	"os/signal"
@@ -13,11 +15,7 @@ import (
 
 // TODO: add /help
 
-// TODO: swapping between text channels
-
 // TODO: consider finding some tool to search videos before downloading
-
-// TODO: maybe handle commands from single guild NOT in parallel
 
 func main() {
 	cfg := config.LoadConfig()
@@ -31,7 +29,7 @@ func main() {
 
 	discordBot := bot.Init(cfg, redisClient, interactions.InitialResponse)
 
-	djMustInChannel := func(next bot.InteractionFunc) bot.InteractionFunc {
+	djMustInChannel := func(next servers.InteractionFunc) servers.InteractionFunc {
 		return middleware.DJOrAdminOnly(middleware.ActiveChannelOnly(next, true))
 	}
 
@@ -39,7 +37,7 @@ func main() {
 		"play",
 		middleware.DJOrAdminOnly(
 			middleware.ActiveChannelOnly(
-				interactions.PlayInteraction,
+				interactions.PlayInteraction(api.NewService(cfg.SearchLimit)),
 				false,
 			),
 		),
@@ -60,6 +58,9 @@ func main() {
 	discordBot.RegisterCommand("loop0", djMustInChannel(interactions.Loop0))
 	discordBot.RegisterCommand("loop1", djMustInChannel(interactions.Loop1))
 	discordBot.RegisterCommand("loop2", djMustInChannel(interactions.Loop2))
+
+	discordBot.RegisterCommand("queueprev", middleware.ActiveChannelOnly(interactions.QueuePrevInteraction, false))
+	discordBot.RegisterCommand("queuenext", middleware.ActiveChannelOnly(interactions.QueueNextInteraction, false))
 
 	go discordBot.Run()
 

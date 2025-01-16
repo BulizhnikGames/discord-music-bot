@@ -210,16 +210,22 @@ func (queue *MusicQueue) All() iter.Seq[Song] {
 func (queue *MusicQueue) Shuffle() {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
+
+	if queue.Len == 0 {
+		return
+	}
+
 	nodes := make([]*node, 0, queue.Len)
 	reader := queue.readNode
-	//builder := strings.Builder{}
-	//builder.WriteString("queue:")
+
 	for reader.val != nil {
-		//builder.WriteString(fmt.Sprintf(" %v", reader.val))
 		nodes = append(nodes, reader)
 		reader = reader.next
 	}
-	//log.Println(builder.String())*/
+	if len(nodes) == 0 {
+		return
+	}
+
 	rand.Shuffle(len(nodes), func(i, j int) {
 		tmpVal, tmpHandled := nodes[i].val, nodes[i].handled
 		nodes[i].val = nodes[j].val
@@ -227,6 +233,7 @@ func (queue *MusicQueue) Shuffle() {
 		nodes[j].val = tmpVal
 		nodes[j].handled = tmpHandled
 	})
+
 	queue.readNode = nodes[0]
 	queue.handleNode = queue.readNode
 	queue.stopHandlers()

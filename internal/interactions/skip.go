@@ -1,22 +1,22 @@
 package interactions
 
 import (
-	"github.com/BulizhnikGames/discord-music-bot/internal/bot"
+	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-faster/errors"
 )
 
-func SkipInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
+func SkipInteraction(server *servers.Server, interaction *discordgo.InteractionCreate) error {
 	switch interaction.Type {
 	case discordgo.InteractionApplicationCommand:
-		err := bot.SkipSong(interaction.GuildID, "")
+		err := server.SkipSong("")
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, "⏩ skipped")
+		responseToInteraction(server.Session, interaction, "⏩ skipped")
 		return nil
 	case discordgo.InteractionMessageComponent:
-		return bot.SkipSong(interaction.GuildID, "⏩ skipped")
+		return server.SkipSong("⏩ skipped")
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
 	}

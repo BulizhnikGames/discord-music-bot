@@ -1,8 +1,10 @@
-package bot
+package voice
 
-import "strings"
+import (
+	"strings"
+)
 
-func (voiceChat *VoiceEntity) constructJsonLine(comps ...string) []byte {
+func ConstructJsonLine(comps ...string) []byte {
 	if len(comps) == 0 {
 		return []byte{}
 	}
@@ -18,12 +20,12 @@ func (voiceChat *VoiceEntity) constructJsonLine(comps ...string) []byte {
 	return []byte(res.String())
 }
 
-func (voiceChat *VoiceEntity) pauseButtonJson(sessionID string) string {
-	voiceChat.mutex.RLock()
-	defer voiceChat.mutex.RUnlock()
+func (voiceChat *Connection) pauseButtonJson(sessionID string) string {
+	voiceChat.Mutex.RLock()
+	defer voiceChat.Mutex.RUnlock()
 	pause := false
-	if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.Stream != nil {
-		pause = voiceChat.nowPlaying.Stream.Paused()
+	if voiceChat.NowPlaying != nil && voiceChat.NowPlaying.Stream != nil {
+		pause = voiceChat.NowPlaying.Stream.Paused()
 	}
 	if pause {
 		return `{
@@ -50,9 +52,9 @@ func (voiceChat *VoiceEntity) pauseButtonJson(sessionID string) string {
 	}
 }
 
-func (voiceChat *VoiceEntity) skipButtonJson(sessionID string) string {
-	voiceChat.mutex.RLock()
-	defer voiceChat.mutex.RUnlock()
+func (voiceChat *Connection) skipButtonJson(sessionID string) string {
+	voiceChat.Mutex.RLock()
+	defer voiceChat.Mutex.RUnlock()
 	return `{
           "custom_id": "` + sessionID + `:skip",
           "type": 2,
@@ -65,9 +67,9 @@ func (voiceChat *VoiceEntity) skipButtonJson(sessionID string) string {
         }`
 }
 
-func (voiceChat *VoiceEntity) stopButtonJson(sessionID string) string {
-	voiceChat.mutex.RLock()
-	defer voiceChat.mutex.RUnlock()
+func (voiceChat *Connection) stopButtonJson(sessionID string) string {
+	voiceChat.Mutex.RLock()
+	defer voiceChat.Mutex.RUnlock()
 	return `{
           "custom_id": "` + sessionID + `:clear",
           "type": 2,
@@ -80,14 +82,14 @@ func (voiceChat *VoiceEntity) stopButtonJson(sessionID string) string {
         }`
 }
 
-func (voiceChat *VoiceEntity) shuffleQueueJson(sessionID string) string {
-	voiceChat.mutex.RLock()
-	defer voiceChat.mutex.RUnlock()
+func (voiceChat *Connection) shuffleQueueJson(sessionID string) string {
+	voiceChat.Mutex.RLock()
+	defer voiceChat.Mutex.RUnlock()
 	return `{
           "custom_id": "` + sessionID + `:shuffle",
           "type": 2,
           "style": 2,
-          "label": "Shuffle queue",
+          "label": "Shuffle Queue",
           "emoji": {
             "name": "🔀",
             "animated": false
@@ -95,10 +97,10 @@ func (voiceChat *VoiceEntity) shuffleQueueJson(sessionID string) string {
         }`
 }
 
-func (voiceChat *VoiceEntity) loopOptsJson(sessionID string) string {
-	voiceChat.mutex.RLock()
-	defer voiceChat.mutex.RUnlock()
-	switch voiceChat.loop {
+func (voiceChat *Connection) loopOptsJson(sessionID string) string {
+	voiceChat.Mutex.RLock()
+	defer voiceChat.Mutex.RUnlock()
+	switch voiceChat.Loop {
 	case 0:
 		return `{
           "custom_id": "` + sessionID + `:loop1",

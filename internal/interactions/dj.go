@@ -2,25 +2,25 @@ package interactions
 
 import (
 	"fmt"
-	"github.com/BulizhnikGames/discord-music-bot/internal/bot"
+	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/bwmarrin/discordgo"
 )
 
-func DJModeInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
+func DJModeInteraction(server *servers.Server, interaction *discordgo.InteractionCreate) error {
 	switch interaction.Type {
 	case discordgo.InteractionApplicationCommand:
 		guildID := interaction.GuildID
-		role := interaction.ApplicationCommandData().Options[0].RoleValue(bot.Session, guildID)
-		err := bot.SetDJRole(guildID, role.ID)
+		role := interaction.ApplicationCommandData().Options[0].RoleValue(server.Session, guildID)
+		err := server.SetDJRole(role.ID)
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf("🥁  DJ role is set to <@&%s>  🥁", role.ID))
+		responseToInteraction(server.Session, interaction, fmt.Sprintf("🥁  DJ role is set to <@&%s>  🥁", role.ID))
 		return nil
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		guildID := interaction.GuildID
-		guild, err := bot.Session.State.Guild(guildID)
+		guild, err := server.Session.State.Guild(guildID)
 		if err != nil {
 			return errors.Newf("couldn't get guild with id %s", guildID)
 		}
@@ -35,7 +35,7 @@ func DJModeInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCr
 				Value: role,
 			}
 		}
-		err = bot.Session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+		err = server.Session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
 			Data: &discordgo.InteractionResponseData{
 				Choices: choices,
@@ -50,15 +50,14 @@ func DJModeInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCr
 	}
 }
 
-func NoDJInteraction(bot *bot.DiscordBot, interaction *discordgo.InteractionCreate) error {
+func NoDJInteraction(server *servers.Server, interaction *discordgo.InteractionCreate) error {
 	switch interaction.Type {
 	case discordgo.InteractionApplicationCommand:
-		guildID := interaction.GuildID
-		err := bot.DeleteDJRole(guildID)
+		err := server.DeleteDJRole()
 		if err != nil {
 			return err
 		}
-		responseToInteraction(bot, interaction, fmt.Sprintf("🥁  DJ role unseted  🥁"))
+		responseToInteraction(server.Session, interaction, fmt.Sprintf("🥁  DJ role unseted  🥁"))
 		return nil
 	default:
 		return errors.Newf("unknown interaction type: %s", interaction.Type.String())

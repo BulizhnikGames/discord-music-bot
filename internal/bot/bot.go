@@ -1,45 +1,23 @@
 package bot
 
 import (
-	"context"
-	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
+	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
-	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
-	"github.com/BulizhnikGames/discord-music-bot/internal/youtube/api"
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
-	"strings"
 	"sync"
 )
 
-type InteractionFunc func(bot *DiscordBot, interaction *discordgo.InteractionCreate) error
-type InteractionMiddleware func(next InteractionFunc, arg any) InteractionFunc
-
-type VoiceEntity struct {
-	voiceConnection *discordgo.VoiceConnection
-	queue           *internal.MusicQueue
-	nowPlaying      *internal.PlayingSong
-	cache           internal.AsyncMap[string, *internal.SongCache] // key is user's query for song
-	loop            int                                            // 0 - no loop, 1 - queue loop, 2 - single loop
-	textChannel     string
-	playbackContext context.Context
-	forceStop       func(playbackText string) // Cancel func for playback context, sets playback message's text ot arg
-	leave           context.CancelFunc        // Cancels main context of voice conn
-	mutex           *sync.RWMutex
-}
-
 type DiscordBot struct {
-	Session       *discordgo.Session
-	Youtube       *api.Youtube
-	Interactions  map[string]InteractionFunc
-	VoiceEntities internal.AsyncMap[string, *VoiceEntity]
-	db            *redis.Client
+	Session      *discordgo.Session
+	interactions map[string]servers.InteractionFunc
+	servers      internal.AsyncMap[string, *servers.Server]
 }
 
-func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *discordgo.InteractionCreate)) *DiscordBot {
+func Init(cfg config.Config, db *redis.Client, respFunc servers.ResponseFunc) *DiscordBot {
 	session, err := discordgo.New("Bot " + cfg.BotToken)
 	if err != nil {
 		log.Fatalf("Error creating Discord session: %s", err)
@@ -105,82 +83,38 @@ func Init(cfg config.Config, db *redis.Client, initResp func(*DiscordBot, *disco
 
 	bot := &DiscordBot{
 		Session:      session,
-		Youtube:      api.NewService(cfg.SearchLimit),
-		Interactions: make(map[string]InteractionFunc),
-		db:           db,
-		VoiceEntities: internal.AsyncMap[string, *VoiceEntity]{
-			Data:  make(map[string]*VoiceEntity),
+		interactions: make(map[string]servers.InteractionFunc),
+		servers: internal.AsyncMap[string, *servers.Server]{
+			Data:  make(map[string]*servers.Server),
 			Mutex: &sync.RWMutex{},
 		},
 	}
 
-	session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		var name string
-		switch i.Type {
-		case discordgo.InteractionApplicationCommand:
-			name = i.ApplicationCommandData().Name
-		case discordgo.InteractionApplicationCommandAutocomplete:
-			name = i.ApplicationCommandData().Name
-		case discordgo.InteractionMessageComponent:
-			name = i.MessageComponentData().CustomID
-		default:
-			name = ""
-		}
-		if idx := strings.Index(name, ":"); idx != -1 {
-			if name[:idx] == session.State.SessionID {
-				name = name[idx+1:]
-			} else {
-				name = ""
-			}
-		}
-		if handler, ok := bot.Interactions[name]; ok {
+	session.AddHandler(func(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+		serverID := interaction.GuildID
+		bot.servers.Mutex.RLock()
+		if serv, ok := bot.servers.Data[serverID]; ok {
 			go func() {
-				go initResp(bot, i)
-				err := handler(bot, i)
-				if err != nil {
-					var userErr, logErr error
-					if det, ok := err.(*errors.DetailedError); ok {
-						userErr = det.User
-						logErr = det.Log
-					} else {
-						logErr = err
-						userErr = errors.New("internal error")
-					}
-					log.Printf(
-						"Error executing interaction (%s %s): %s",
-						name,
-						i.Type.String(),
-						logErr.Error(),
-					)
-					if i.Type == discordgo.InteractionApplicationCommand {
-						resp := fmt.Sprintf("❌  %s  ❌", userErr.Error())
-						_, _ = session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-							Embeds: &[]*discordgo.MessageEmbed{
-								{
-									Author: &discordgo.MessageEmbedAuthor{
-										Name:    resp,
-										IconURL: i.User.AvatarURL("64x64"),
-									},
-									Color: 2326507,
-									Footer: &discordgo.MessageEmbedFooter{
-										Text: "github.com/BulizhnikGames/discord-music-bot",
-									},
-								},
-							},
-						})
-					}
-				}
+				serv.Interactions <- interaction
 			}()
+			bot.servers.Mutex.RUnlock()
 		} else {
-			log.Printf("Error: no such command: %s", name)
+			bot.servers.Mutex.RUnlock()
+			bot.servers.Mutex.Lock()
+			bot.servers.Data[serverID] = servers.New(session, bot.interactions, serverID, db, respFunc)
+			interactionChan := bot.servers.Data[serverID].Interactions
+			bot.servers.Mutex.Unlock()
+			go func() {
+				interactionChan <- interaction
+			}()
 		}
 	})
 
 	return bot
 }
 
-func (bot *DiscordBot) RegisterCommand(name string, handler InteractionFunc) {
-	bot.Interactions[name] = handler
+func (bot *DiscordBot) RegisterCommand(name string, handler servers.InteractionFunc) {
+	bot.interactions[name] = handler
 }
 
 func (bot *DiscordBot) Run() {
@@ -192,18 +126,11 @@ func (bot *DiscordBot) Run() {
 }
 
 func (bot *DiscordBot) Stop() {
-	bot.VoiceEntities.Mutex.Lock()
-	for _, voice := range bot.VoiceEntities.Data {
-		err := voice.voiceConnection.Disconnect()
-		if err != nil {
-			log.Printf("Couldn't disconnect from voice chat (id: %s, guild: %s)",
-				voice.voiceConnection.ChannelID,
-				voice.voiceConnection.GuildID,
-			)
-		}
+	bot.servers.Mutex.Lock()
+	for _, server := range bot.servers.Data {
+		server.Stop()
 	}
-	bot.VoiceEntities.Mutex.Unlock()
+	bot.servers.Mutex.Unlock()
 	bot.Session.Close()
 	os.RemoveAll(config.Storage)
-	//os.Mkdir(config.Storage, 0777)
 }

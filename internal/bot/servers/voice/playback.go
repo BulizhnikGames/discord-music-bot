@@ -1,4 +1,4 @@
-package bot
+package voice
 
 import (
 	"context"
@@ -10,62 +10,75 @@ import (
 	"github.com/jogramming/dca"
 	"io"
 	"log"
+	"sync"
 	"time"
 )
 
+type Connection struct {
+	VoiceConnection *discordgo.VoiceConnection
+	Queue           *internal.MusicQueue
+	NowPlaying      *internal.PlayingSong
+	Cache           internal.AsyncMap[string, *internal.SongCache] // Key is user's query for song
+	Loop            int                                            // 0 - no Loop, 1 - Loop over Queue, 2 - Loop over song
+	// ID of channel where first /play command was sent (all next playback messages will be sent there)
+	TextChannel     string
+	playbackContext context.Context           // Context of all playback cancels when Queue is empty by ForceStop
+	ForceStop       func(playbackText string) // Cancel func for playback context, sets playback message's text ot arg
+	Leave           context.CancelFunc        // Cancels main context of voice conn
+	Mutex           *sync.RWMutex             // Mutex for fields: NowPlaying, Loop, playbackContext, ForceStop
+}
+
 const PLAYBACK_TIMEOUT = 30 * time.Minute
 
-func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
-	defer func() {
-		_ = bot.LeaveVoiceChat(voiceChat.voiceConnection.GuildID)
-	}()
+func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.Session) {
+	defer voiceChat.VoiceConnection.Disconnect()
 
 	timeout := time.NewTimer(PLAYBACK_TIMEOUT).C
 	for {
 		select {
 		case <-timeout:
-			log.Printf("Playback timeout (channel: %s, guild: %s)", voiceChat.voiceConnection.GuildID, voiceChat.voiceConnection.GuildID)
+			log.Printf("Playback timeout (channel: %s, guild: %s)", voiceChat.VoiceConnection.GuildID, voiceChat.VoiceConnection.GuildID)
 			return
 		case <-ctx.Done():
-			log.Printf("leave signal (channel: %s, guild: %s)", voiceChat.voiceConnection.GuildID, voiceChat.voiceConnection.GuildID)
+			log.Printf("Leave signal (channel: %s, guild: %s)", voiceChat.VoiceConnection.GuildID, voiceChat.VoiceConnection.GuildID)
 			return
-		case <-voiceChat.queue.NewHandled:
-			song := voiceChat.queue.ReadHandled()
+		case <-voiceChat.Queue.NewHandled:
+			song := voiceChat.Queue.ReadHandled()
 			if song == nil {
 				continue
 			}
 			if song.FilePath == "" {
-				log.Printf("couldn't play song")
-				voiceChat.SendErrorPlaybackMessage(bot.Session, *song)
+				log.Printf("couldn't play song: %+v:", song)
+				voiceChat.SendErrorPlaybackMessage(session, *song)
 				continue
 			}
-			voiceChat.mutex.Lock()
+			voiceChat.Mutex.Lock()
 			if voiceChat.playbackContext == nil || voiceChat.playbackContext.Err() != nil {
 				playbackCtx, cancel := context.WithCancel(ctx)
 				voiceChat.playbackContext = playbackCtx
-				voiceChat.forceStop = func(setText string) {
-					voiceChat.mutex.Lock()
-					defer voiceChat.mutex.Unlock()
+				voiceChat.ForceStop = func(setText string) {
+					voiceChat.Mutex.Lock()
+					defer voiceChat.Mutex.Unlock()
 
 					if setText == "" {
-						voiceChat.DeletePlaybackMessage(bot.Session)
+						voiceChat.DeletePlaybackMessage(session)
 					} else {
-						voiceChat.mutex.Unlock()
-						_ = voiceChat.SetPlaybackMessageToText(bot.Session, setText)
-						voiceChat.mutex.Lock()
+						voiceChat.Mutex.Unlock()
+						_ = voiceChat.SetPlaybackMessageToText(session, setText)
+						voiceChat.Mutex.Lock()
 					}
 
 					cancel()
 
-					if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.EncodeSession != nil {
-						voiceChat.nowPlaying.EncodeSession.Cleanup()
-						voiceChat.nowPlaying = nil
+					if voiceChat.NowPlaying != nil && voiceChat.NowPlaying.EncodeSession != nil {
+						voiceChat.NowPlaying.EncodeSession.Cleanup()
+						voiceChat.NowPlaying = nil
 					}
 				}
 			}
-			voiceChat.mutex.Unlock()
+			voiceChat.Mutex.Unlock()
 			log.Printf("Playing song %s (query %s)", song.Title, song.Query)
-			err := voiceChat.playSong(voiceChat.playbackContext, bot.Session, song)
+			err := voiceChat.playSong(voiceChat.playbackContext, session, song)
 			if err != nil {
 				log.Printf("Error playing song: %s", err.Error())
 			}
@@ -74,7 +87,7 @@ func (voiceChat *VoiceEntity) PlaySongs(ctx context.Context, bot *DiscordBot) {
 	}
 }
 
-func (voiceChat *VoiceEntity) playSong(ctx context.Context, session *discordgo.Session, song *internal.Song) error {
+func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Session, song *internal.Song) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -98,53 +111,56 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, session *discordgo.S
 	defer encodeSession.Cleanup()
 
 	playContext, cancel := context.WithCancel(ctx)
-	voiceChat.mutex.Lock()
-	voiceChat.nowPlaying = &internal.PlayingSong{
+	voiceChat.Mutex.Lock()
+	voiceChat.NowPlaying = &internal.PlayingSong{
 		Song:          song,
 		EncodeSession: encodeSession,
 	}
-	voiceChat.nowPlaying.Skip = func(setText string) {
-		voiceChat.mutex.Lock()
-		defer voiceChat.mutex.Unlock()
+	voiceChat.NowPlaying.Skip = func(setText string) {
+		voiceChat.Mutex.Lock()
+		defer voiceChat.Mutex.Unlock()
 
-		// delete only if queue is empty otherwise notify user about it
-		if setText == "" && voiceChat.queue.Len > 0 {
-			voiceChat.DeletePlaybackMessage(session)
-		} else {
+		// delete or set text only if queue isn't empty otherwise notify user about it
+		if voiceChat.Queue.Len > 0 {
 			if setText == "" {
-				setText = "🔇  queue has ended!  🔇"
+				voiceChat.DeletePlaybackMessage(session)
+			} else {
+				voiceChat.Mutex.Unlock()
+				_ = voiceChat.SetPlaybackMessageToText(session, setText)
+				voiceChat.Mutex.Lock()
 			}
-			voiceChat.mutex.Unlock()
-			_ = voiceChat.SetPlaybackMessageToText(session, setText)
-			voiceChat.mutex.Lock()
+		} else {
+			voiceChat.Mutex.Unlock()
+			_ = voiceChat.SetPlaybackMessageToText(session, "🔇  Queue has ended!  🔇")
+			voiceChat.Mutex.Lock()
 		}
 
-		voiceChat.nowPlaying = nil
+		voiceChat.NowPlaying = nil
 		cancel()
-		if voiceChat.loop == 2 {
+		if voiceChat.Loop == 2 {
 			return
 		}
 
-		voiceChat.cache.Mutex.Lock()
-		defer voiceChat.cache.Mutex.Unlock()
-		cache, ok := voiceChat.cache.Data[song.Query]
+		voiceChat.Cache.Mutex.Lock()
+		defer voiceChat.Cache.Mutex.Unlock()
+		cache, ok := voiceChat.Cache.Data[song.Query]
 		if ok {
 			cache.Cnt--
-			if voiceChat.loop == 0 && cache.Cnt <= 0 {
+			if voiceChat.Loop == 0 && cache.Cnt <= 0 {
 				encodeSession.Cleanup()
 				cache.Delete()
-				delete(voiceChat.cache.Data, song.Query)
+				delete(voiceChat.Cache.Data, song.Query)
 			}
 		}
 
-		if voiceChat.loop == 1 {
-			voiceChat.queue.Write(*song)
+		if voiceChat.Loop == 1 {
+			voiceChat.Queue.Write(*song)
 		}
 	}
 
 	done := make(chan error)
-	voiceChat.nowPlaying.Stream = dca.NewStream(encodeSession, voiceChat.voiceConnection, done)
-	voiceChat.mutex.Unlock()
+	voiceChat.NowPlaying.Stream = dca.NewStream(encodeSession, voiceChat.VoiceConnection, done)
+	voiceChat.Mutex.Unlock()
 
 	err = voiceChat.NewPlaybackMessage(session)
 	if err != nil {
@@ -158,37 +174,37 @@ func (voiceChat *VoiceEntity) playSong(ctx context.Context, session *discordgo.S
 		}
 	case <-playContext.Done():
 		log.Printf("Skipped %s", song.Title)
-		voiceChat.mutex.RLock()
-		if voiceChat.loop == 2 {
-			voiceChat.mutex.RUnlock()
+		voiceChat.Mutex.RLock()
+		if voiceChat.Loop == 2 {
+			voiceChat.Mutex.RUnlock()
 			encodeSession.Cleanup()
 			return voiceChat.playSong(ctx, session, song)
 		}
-		voiceChat.mutex.RUnlock()
+		voiceChat.Mutex.RUnlock()
 		return nil
 	}
-	voiceChat.nowPlaying.Skip("")
+	voiceChat.NowPlaying.Skip("")
 	log.Printf("End of song %s", song.Title)
-	voiceChat.mutex.RLock()
-	if voiceChat.loop == 2 {
-		voiceChat.mutex.RUnlock()
+	voiceChat.Mutex.RLock()
+	if voiceChat.Loop == 2 {
+		voiceChat.Mutex.RUnlock()
 		encodeSession.Cleanup()
 		return voiceChat.playSong(ctx, session, song)
 	}
-	voiceChat.mutex.RUnlock()
+	voiceChat.Mutex.RUnlock()
 	return nil
 }
 
-func (voiceChat *VoiceEntity) NewPlaybackMessage(session *discordgo.Session) error {
-	voiceChat.mutex.Lock()
-	defer voiceChat.mutex.Unlock()
+func (voiceChat *Connection) NewPlaybackMessage(session *discordgo.Session) error {
+	voiceChat.Mutex.RLock()
+	defer voiceChat.Mutex.RUnlock()
 
-	if voiceChat.nowPlaying == nil || voiceChat.nowPlaying.Song == nil {
+	if voiceChat.NowPlaying == nil || voiceChat.NowPlaying.Song == nil {
 		return errors.New("no song playing")
 	}
-	song := voiceChat.nowPlaying.Song
+	song := voiceChat.NowPlaying.Song
 
-	firstLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
+	firstLine, err := discordgo.MessageComponentFromJSON(ConstructJsonLine(
 		voiceChat.pauseButtonJson(session.State.SessionID),
 		voiceChat.skipButtonJson(session.State.SessionID),
 		voiceChat.stopButtonJson(session.State.SessionID),
@@ -197,7 +213,7 @@ func (voiceChat *VoiceEntity) NewPlaybackMessage(session *discordgo.Session) err
 		return err
 	}
 
-	secondLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
+	secondLine, err := discordgo.MessageComponentFromJSON(ConstructJsonLine(
 		voiceChat.shuffleQueueJson(session.State.SessionID),
 		voiceChat.loopOptsJson(session.State.SessionID),
 	))
@@ -205,19 +221,15 @@ func (voiceChat *VoiceEntity) NewPlaybackMessage(session *discordgo.Session) err
 		return err
 	}
 
-	var title, author string
-	if song.Title == "" {
-		title = "Loading..."
-	} else {
+	var title, author = "Loading...", "Loading..."
+	if song.Title != "" {
 		title = fmt.Sprintf("%s - [%d:%02d]", song.Title, song.Duration/60, song.Duration%60)
 	}
-	if song.Author == "" {
-		author = "Loading..."
-	} else {
+	if song.Author != "" {
 		author = song.Author
 	}
 
-	msg, err := session.ChannelMessageSendComplex(voiceChat.textChannel,
+	msg, err := session.ChannelMessageSendComplex(voiceChat.TextChannel,
 		&discordgo.MessageSend{
 			Embeds: []*discordgo.MessageEmbed{
 				{
@@ -250,30 +262,34 @@ func (voiceChat *VoiceEntity) NewPlaybackMessage(session *discordgo.Session) err
 	if err != nil {
 		return err
 	}
-	voiceChat.nowPlaying.Message = msg
+	voiceChat.Mutex.RUnlock()
+	voiceChat.Mutex.Lock()
+	voiceChat.NowPlaying.Message = msg
+	voiceChat.Mutex.Unlock()
+	voiceChat.Mutex.RLock()
 	return nil
 }
 
-func (voiceChat *VoiceEntity) TryRegenPlaybackMessage(session *discordgo.Session) {
-	voiceChat.mutex.Lock()
-	defer voiceChat.mutex.Unlock()
+func (voiceChat *Connection) TryRegenPlaybackMessage(session *discordgo.Session) {
+	voiceChat.Mutex.RLock()
+	defer voiceChat.Mutex.RUnlock()
 
 	var id, channel = "", ""
-	if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.Message != nil {
-		id = voiceChat.nowPlaying.Message.ID
-		channel = voiceChat.nowPlaying.Message.ChannelID
+	if voiceChat.NowPlaying != nil && voiceChat.NowPlaying.Message != nil {
+		id = voiceChat.NowPlaying.Message.ID
+		channel = voiceChat.NowPlaying.Message.ChannelID
 	}
 
 	var s = internal.Song{}
-	if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.Song != nil {
-		s = *voiceChat.nowPlaying.Song
+	if voiceChat.NowPlaying != nil && voiceChat.NowPlaying.Song != nil {
+		s = *voiceChat.NowPlaying.Song
 	}
 
 	if id == "" {
 		go voiceChat.NewPlaybackMessage(session)
 	} else {
 		//log.Printf(id)
-		firstLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
+		firstLine, err := discordgo.MessageComponentFromJSON(ConstructJsonLine(
 			voiceChat.pauseButtonJson(session.State.SessionID),
 			voiceChat.skipButtonJson(session.State.SessionID),
 			voiceChat.stopButtonJson(session.State.SessionID),
@@ -281,7 +297,7 @@ func (voiceChat *VoiceEntity) TryRegenPlaybackMessage(session *discordgo.Session
 		if err != nil {
 			return
 		}
-		secondLine, err := discordgo.MessageComponentFromJSON(voiceChat.constructJsonLine(
+		secondLine, err := discordgo.MessageComponentFromJSON(ConstructJsonLine(
 			voiceChat.shuffleQueueJson(session.State.SessionID),
 			voiceChat.loopOptsJson(session.State.SessionID),
 		))
@@ -289,15 +305,11 @@ func (voiceChat *VoiceEntity) TryRegenPlaybackMessage(session *discordgo.Session
 			return
 		}
 
-		var title, author string
-		if s.Title == "" {
-			title = "Loading..."
-		} else {
+		var title, author = "Loading...", "Loading..."
+		if s.Title != "" {
 			title = fmt.Sprintf("%s - [%d:%02d]", s.Title, s.Duration/60, s.Duration%60)
 		}
-		if s.Author == "" {
-			author = "Loading..."
-		} else {
+		if s.Author != "" {
 			author = s.Author
 		}
 
@@ -334,18 +346,22 @@ func (voiceChat *VoiceEntity) TryRegenPlaybackMessage(session *discordgo.Session
 		if err != nil {
 			return
 		}
-		voiceChat.nowPlaying.Message = msg
+		voiceChat.Mutex.RUnlock()
+		voiceChat.Mutex.Lock()
+		voiceChat.NowPlaying.Message = msg
+		voiceChat.Mutex.Unlock()
+		voiceChat.Mutex.RLock()
 	}
 }
 
-func (voiceChat *VoiceEntity) SetPlaybackMessageToText(session *discordgo.Session, text string) error {
-	voiceChat.mutex.Lock()
-	defer voiceChat.mutex.Unlock()
+func (voiceChat *Connection) SetPlaybackMessageToText(session *discordgo.Session, text string) error {
+	voiceChat.Mutex.RLock()
+	defer voiceChat.Mutex.RUnlock()
 
 	var id, channel = "", ""
-	if voiceChat.nowPlaying != nil && voiceChat.nowPlaying.Message != nil {
-		id = voiceChat.nowPlaying.Message.ID
-		channel = voiceChat.nowPlaying.Message.ChannelID
+	if voiceChat.NowPlaying != nil && voiceChat.NowPlaying.Message != nil {
+		id = voiceChat.NowPlaying.Message.ID
+		channel = voiceChat.NowPlaying.Message.ChannelID
 	}
 
 	if id == "" {
@@ -372,17 +388,21 @@ func (voiceChat *VoiceEntity) SetPlaybackMessageToText(session *discordgo.Sessio
 	if err != nil {
 		return err
 	}
-	voiceChat.nowPlaying.Message = msg
+	voiceChat.Mutex.RUnlock()
+	voiceChat.Mutex.Lock()
+	voiceChat.NowPlaying.Message = msg
+	voiceChat.Mutex.Unlock()
+	voiceChat.Mutex.RLock()
 	return nil
 }
 
-func (voiceChat *VoiceEntity) DeletePlaybackMessage(session *discordgo.Session) {
-	if voiceChat.nowPlaying.Message != nil && len(voiceChat.nowPlaying.Message.Components) > 0 {
-		_ = session.ChannelMessageDelete(voiceChat.nowPlaying.Message.ChannelID, voiceChat.nowPlaying.Message.ID)
+func (voiceChat *Connection) DeletePlaybackMessage(session *discordgo.Session) {
+	if voiceChat.NowPlaying.Message != nil && len(voiceChat.NowPlaying.Message.Components) > 0 {
+		_ = session.ChannelMessageDelete(voiceChat.NowPlaying.Message.ChannelID, voiceChat.NowPlaying.Message.ID)
 	}
 }
 
-func (voiceChat *VoiceEntity) SendErrorPlaybackMessage(session *discordgo.Session, song internal.Song) {
+func (voiceChat *Connection) SendErrorPlaybackMessage(session *discordgo.Session, song internal.Song) {
 	var message string
 	if song.Title != "" {
 		message = fmt.Sprintf(
@@ -395,7 +415,7 @@ func (voiceChat *VoiceEntity) SendErrorPlaybackMessage(session *discordgo.Sessio
 			song.Query,
 		)
 	}
-	_, err := session.ChannelMessageSendComplex(voiceChat.textChannel,
+	_, err := session.ChannelMessageSendComplex(voiceChat.TextChannel,
 		&discordgo.MessageSend{
 			Embeds: []*discordgo.MessageEmbed{
 				{
