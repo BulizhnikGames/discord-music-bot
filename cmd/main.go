@@ -15,7 +15,12 @@ import (
 
 // TODO: add /help
 
-// TODO: consider finding some tool to search videos before downloading
+// TODO: use cookies for searching age restricted content on Youtube
+// TODO: (only guild set in .env file could use cookies for security reasons)
+
+// TODO: auto complete play command with variants using yt-dlp
+
+// TODO: initially parse single songs when play command used
 
 func main() {
 	cfg := config.LoadConfig()
