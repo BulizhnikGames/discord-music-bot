@@ -10,7 +10,6 @@ import (
 const QUEUE_SIZE = 140
 const LINK_PREFIX = "https://www.youtube.com/watch?v="
 
-var Storage string
 var Utils string
 
 type RedisConfig struct {
@@ -48,14 +47,6 @@ func LoadConfig() Config {
 	cfg.SearchLimit, err = strconv.Atoi(os.Getenv("SEARCH_LIMIT"))
 	if err != nil {
 		log.Fatalf("Incorrect search limit: %s", err)
-	}
-
-	Storage = os.Getenv("STORAGE")
-	if Storage == "" {
-		log.Fatal("Storage not found")
-	}
-	if Storage[len(Storage)-1] != '/' {
-		Storage = Storage + "/"
 	}
 
 	Utils = os.Getenv("UTILS_PATH")

@@ -3,8 +3,6 @@ package internal
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/jogramming/dca"
-	"log"
-	"os"
 	"sync"
 )
 
@@ -12,18 +10,9 @@ type Song struct {
 	Title        string
 	Author       string
 	Duration     int
-	URL          string
+	FileURL      string
 	ThumbnailUrl string
-	FilePath     string
 	Query        string
-}
-
-func (song *Song) Delete() {
-	log.Printf("Delete song %s", song.Title)
-	err := os.Remove(song.FilePath)
-	if err != nil {
-		log.Printf("Delete song file error: %s\n", err)
-	}
 }
 
 type SongCache struct {

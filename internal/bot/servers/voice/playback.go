@@ -47,7 +47,7 @@ func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.S
 			if song == nil {
 				continue
 			}
-			if song.FilePath == "" {
+			if song.FileURL == "" {
 				log.Printf("couldn't play song: %+v:", song)
 				voiceChat.SendErrorPlaybackMessage(session, *song)
 				continue
@@ -103,10 +103,10 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 	options.Bitrate = 96
 	options.RawOutput = true
 
-	encodeSession, err := dca.EncodeFile(song.FilePath, options)
+	encodeSession, err := dca.EncodeFile(song.FileURL, options)
 	if err != nil {
 		voiceChat.SendErrorPlaybackMessage(session, *song)
-		return errors.Errorf("Failed to create encoding session for %s: %v", song.FilePath, err)
+		return errors.Errorf("Failed to create encoding session for %s (%s): %v", song.Query, song.FileURL, err)
 	}
 	defer encodeSession.Cleanup()
 
@@ -148,7 +148,6 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 			cache.Cnt--
 			if voiceChat.Loop == 0 && cache.Cnt <= 0 {
 				encodeSession.Cleanup()
-				cache.Delete()
 				delete(voiceChat.Cache.Data, song.Query)
 			}
 		}
@@ -238,7 +237,7 @@ func (voiceChat *Connection) NewPlaybackMessage(session *discordgo.Session) erro
 						IconURL: session.State.User.AvatarURL("64x64"),
 					},
 					Title: title,
-					URL:   song.URL,
+					URL:   song.FileURL,
 					Color: 2326507,
 					Fields: []*discordgo.MessageEmbedField{
 						{
@@ -323,7 +322,7 @@ func (voiceChat *Connection) TryRegenPlaybackMessage(session *discordgo.Session)
 						IconURL: session.State.User.AvatarURL("64x64"),
 					},
 					Title: title,
-					URL:   s.URL,
+					URL:   s.FileURL,
 					Color: 2326507,
 					Fields: []*discordgo.MessageEmbedField{
 						{

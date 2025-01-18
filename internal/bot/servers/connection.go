@@ -4,10 +4,7 @@ import (
 	"context"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers/voice"
-	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
-	"log"
-	"os"
 	"sync"
 )
 
@@ -64,10 +61,6 @@ func (server *Server) LeaveVoiceChat() error {
 		}
 		server.VoiceChat = nil
 
-		err = os.RemoveAll(config.Storage + server.GuildID + "/")
-		if err != nil {
-			log.Printf("couldn't delete guilds cache: %v", err)
-		}
 		return nil
 	} else {
 		return errors.New("bot isn't in the voice chat")

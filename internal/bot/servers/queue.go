@@ -3,10 +3,7 @@ package servers
 import (
 	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
-	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
-	"log"
-	"os"
 	"time"
 )
 
@@ -44,11 +41,6 @@ func (server *Server) ClearQueue(playbackText string) error {
 		server.VoiceChat.Cache.Mutex.Lock()
 		clear(server.VoiceChat.Cache.Data)
 		server.VoiceChat.Cache.Mutex.Unlock()
-
-		err := os.RemoveAll(config.Storage + server.GuildID + "/")
-		if err != nil {
-			log.Printf("couldn't delete guilds Cache: %v", err)
-		}
 
 		return nil
 	} else {

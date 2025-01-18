@@ -7,10 +7,11 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/go-faster/errors"
+	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
-	"time"
 )
 
 type Result struct {
@@ -18,8 +19,7 @@ type Result struct {
 	Err        error
 }
 
-func Download(ctx context.Context, guildID, query string, res chan<- Result) {
-	start := time.Now()
+func Download(ctx context.Context, query string, res chan<- Result) {
 	firstArg := query
 	if !strings.HasPrefix(query, config.LINK_PREFIX) {
 		firstArg = fmt.Sprintf("ytsearch10:%s", strings.ReplaceAll(query, "\"", ""))
@@ -27,21 +27,14 @@ func Download(ctx context.Context, guildID, query string, res chan<- Result) {
 	args := []string{
 		firstArg,
 		//"-N", "4",
-		"--extract-audio",
-		"--buffer-size", "4096",
-		"--retries", "3",
-		"--audio-format", "opus",
+		"-f", "bestaudio",
+		"--max-downloads", "1",
 		"--no-playlist",
 		"--match-filter", fmt.Sprintf("duration < %d & !is_live", 20*60),
-		"--max-downloads", "1",
-		"--output", fmt.Sprintf("%s%s/%d-%%(id)s.opus", config.Storage, guildID, start.Unix()),
-		"--quiet",
+		"--skip-download",
 		"--print-json",
-		"--ignore-errors", // Ignores unavailable videos
-		"--no-color",
-		"--no-check-formats",
 	}
-	//log.Printf("yt-dlp %s", strings.Join(args, " "))
+	log.Printf("yt-dlp %s", strings.Join(args, " "))
 	var commandPath string
 	if config.Utils == "" {
 		commandPath = "yt-dlp"
@@ -49,31 +42,33 @@ func Download(ctx context.Context, guildID, query string, res chan<- Result) {
 		commandPath = config.Utils + "yt-dlp.exe"
 	}
 	cmd := exec.Command(commandPath, args...)
+	if runtime.GOOS == "windows" {
+		cmd.Env = append(os.Environ(), "LANG=ru_RU.UTF-8")
+	}
 	if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
 		res <- Result{nil, errors.Errorf("failed to search and download audio (query %s): %v", query, err)}
+		return
 	} else {
 		videoMetadata := internal.VideoMetadata{}
 		err = json.Unmarshal(data, &videoMetadata)
 		if err != nil {
 			res <- Result{nil, errors.Errorf("failed to unmarshal video metadata (query %s): %v", query, err)}
+			return
 		}
-		//dotIdx := strings.LastIndex(videoMetadata.Filename, ".")
-		//slashIdx := strings.LastIndex(videoMetadata.Filename, `\`)
-		path := fmt.Sprintf("%s%s/%d-%s.opus", config.Storage, guildID, start.Unix(), videoMetadata.ID)
 		select {
 		case <-ctx.Done():
-			os.RemoveAll(path)
 			res <- Result{nil, ctx.Err()}
+			return
 		default:
 			res <- Result{&internal.Song{
 				Title:        videoMetadata.Title,
 				Author:       videoMetadata.Uploader,
 				Duration:     videoMetadata.Duration,
-				URL:          videoMetadata.URL,
+				FileURL:      videoMetadata.URL,
 				ThumbnailUrl: videoMetadata.Thumbnail,
-				FilePath:     path,
 				Query:        query,
 			}, nil}
+			return
 		}
 	}
 }

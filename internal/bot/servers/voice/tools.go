@@ -23,7 +23,7 @@ func (voiceChat *Connection) DownloadSong(ctx context.Context, song *internal.So
 	voiceChat.Cache.Mutex.Unlock()
 	log.Printf("Downloading song: %s (%s)", song.Query, song.Title)
 	res := make(chan youtube.Result)
-	go youtube.Download(ctx, voiceChat.VoiceConnection.GuildID, song.Query, res)
+	go youtube.Download(ctx, song.Query, res)
 	select {
 	case data := <-res:
 		if data.Err != nil {

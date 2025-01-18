@@ -7,7 +7,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
 	"log"
-	"os"
 	"sync"
 )
 
@@ -132,5 +131,4 @@ func (bot *DiscordBot) Stop() {
 	}
 	bot.servers.Mutex.Unlock()
 	bot.Session.Close()
-	os.RemoveAll(config.Storage)
 }

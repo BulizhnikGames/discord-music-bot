@@ -196,7 +196,7 @@ func (queue *MusicQueue) All() iter.Seq[Song] {
 		reader := *queue.readNode
 		for reader.val != nil {
 			if reader.handled {
-				if reader.val.FilePath != "" {
+				if reader.val.FileURL != "" {
 					yield(*reader.val)
 				}
 			} else {
