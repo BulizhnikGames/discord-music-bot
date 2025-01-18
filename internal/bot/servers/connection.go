@@ -5,8 +5,12 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers/voice"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
+	"log"
 	"sync"
+	"time"
 )
+
+const VOICE_TIMEOUT = 1 * time.Minute
 
 // JoinVoiceChat bot joins voice chat if it isn't already in one.
 // If bot is already in voice chat:
@@ -48,17 +52,39 @@ func (server *Server) JoinVoiceChat(guildID, voiceChannel, textChannel string) (
 	queue.SetHandler(server.VoiceChat.DownloadSong)
 	server.VoiceChat.Leave = stop
 
-	go server.VoiceChat.PlaySongs(ctx, server.Session)
+	updateTimeoutTimer := make(chan struct{}, 10)
+	go server.LeaveAfterTimeout(updateTimeoutTimer)
+	go server.VoiceChat.PlaySongs(ctx, server.Session, updateTimeoutTimer)
 
 	return server.VoiceChat, nil
 }
 
+func (server *Server) LeaveAfterTimeout(updateTimer <-chan struct{}) {
+	timer := time.NewTimer(VOICE_TIMEOUT)
+	select {
+	case <-timer.C:
+		err := server.LeaveVoiceChat()
+		if err != nil {
+			log.Printf("Couldn't leave voice chat after reaching timeout: %v", err)
+		}
+		return
+	case <-updateTimer:
+		timer = time.NewTimer(VOICE_TIMEOUT)
+	}
+}
+
 func (server *Server) LeaveVoiceChat() error {
 	if server.VoiceChat != nil {
-		err := server.VoiceChat.VoiceConnection.Disconnect()
+		err := server.ClearQueue("⛔  left voice channel  ⛔")
 		if err != nil {
 			return err
 		}
+
+		err = server.VoiceChat.VoiceConnection.Disconnect()
+		if err != nil {
+			return err
+		}
+
 		server.VoiceChat = nil
 
 		return nil

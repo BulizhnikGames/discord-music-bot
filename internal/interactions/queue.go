@@ -188,7 +188,7 @@ func NowPlayingInteraction(server *servers.Server, interaction *discordgo.Intera
 					song.Duration/60,
 					song.Duration%60,
 				),
-				song.FileURL,
+				song.FileUrl,
 				fmt.Sprintf("by %s", song.Author),
 				song.ThumbnailUrl,
 			)

@@ -36,7 +36,9 @@ func (server *Server) ClearQueue(playbackText string) error {
 	if server.VoiceChat != nil {
 		server.VoiceChat.Queue.Clear()
 
-		server.VoiceChat.ForceStop(playbackText)
+		if server.VoiceChat.ForceStop != nil {
+			server.VoiceChat.ForceStop(playbackText)
+		}
 
 		server.VoiceChat.Cache.Mutex.Lock()
 		clear(server.VoiceChat.Cache.Data)

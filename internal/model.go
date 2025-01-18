@@ -10,7 +10,8 @@ type Song struct {
 	Title        string
 	Author       string
 	Duration     int
-	FileURL      string
+	OriginalUrl  string
+	FileUrl      string
 	ThumbnailUrl string
 	Query        string
 }
@@ -21,22 +22,18 @@ type SongCache struct {
 }
 
 type PlayingSong struct {
-	Skip    func(playbackText string) // Skip playing song
-	Stream  *dca.StreamingSession
-	Message *discordgo.Message
 	*Song
+	// Skip playing song, won't stop playback when playback is looped over song
+	Skip func(playbackText string)
+	// Playback message
+	Message       *discordgo.Message
+	Stream        *dca.StreamingSession
 	EncodeSession *dca.EncodeSession
 }
 
 type AsyncMap[K comparable, V any] struct {
 	Data  map[K]V
 	Mutex *sync.RWMutex
-}
-
-func (m *AsyncMap[K, V]) Put(k K, v V) {
-	m.Mutex.Lock()
-	defer m.Mutex.Unlock()
-	m.Data[k] = v
 }
 
 type VideoMetadata struct {

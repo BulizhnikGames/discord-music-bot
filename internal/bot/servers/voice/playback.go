@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"sync"
-	"time"
 )
 
 type Connection struct {
@@ -22,23 +21,19 @@ type Connection struct {
 	Loop            int                                            // 0 - no Loop, 1 - Loop over Queue, 2 - Loop over song
 	// ID of channel where first /play command was sent (all next playback messages will be sent there)
 	TextChannel     string
-	playbackContext context.Context           // Context of all playback cancels when Queue is empty by ForceStop
-	ForceStop       func(playbackText string) // Cancel func for playback context, sets playback message's text ot arg
-	Leave           context.CancelFunc        // Cancels main context of voice conn
-	Mutex           *sync.RWMutex             // Mutex for fields: NowPlaying, Loop, playbackContext, ForceStop
+	playbackContext context.Context // Context of all playback cancels when Queue is empty by ForceStop
+	// Cancel func for playback context, sets playback message's text ot arg
+	// Skip function on NowPlaying won't stop playback when Loop = 2, but this will
+	ForceStop func(playbackText string)
+	Leave     context.CancelFunc // Cancels main context of voice conn
+	Mutex     *sync.RWMutex      // Mutex for fields: NowPlaying, Loop, playbackContext, ForceStop
 }
 
-const PLAYBACK_TIMEOUT = 30 * time.Minute
-
-func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.Session) {
+func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.Session, updateTimer chan<- struct{}) {
 	defer voiceChat.VoiceConnection.Disconnect()
 
-	timeout := time.NewTimer(PLAYBACK_TIMEOUT).C
 	for {
 		select {
-		case <-timeout:
-			log.Printf("Playback timeout (channel: %s, guild: %s)", voiceChat.VoiceConnection.GuildID, voiceChat.VoiceConnection.GuildID)
-			return
 		case <-ctx.Done():
 			log.Printf("Leave signal (channel: %s, guild: %s)", voiceChat.VoiceConnection.GuildID, voiceChat.VoiceConnection.GuildID)
 			return
@@ -47,7 +42,7 @@ func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.S
 			if song == nil {
 				continue
 			}
-			if song.FileURL == "" {
+			if song.FileUrl == "" {
 				log.Printf("couldn't play song: %+v:", song)
 				voiceChat.SendErrorPlaybackMessage(session, *song)
 				continue
@@ -77,12 +72,12 @@ func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.S
 				}
 			}
 			voiceChat.Mutex.Unlock()
-			log.Printf("Playing song %s (query %s)", song.Title, song.Query)
+			log.Printf("Playing song %s (%s)", song.Title, song.FileUrl)
 			err := voiceChat.playSong(voiceChat.playbackContext, session, song)
 			if err != nil {
 				log.Printf("Error playing song: %s", err.Error())
 			}
-			timeout = time.NewTimer(PLAYBACK_TIMEOUT).C
+			updateTimer <- struct{}{}
 		}
 	}
 }
@@ -103,10 +98,10 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 	options.Bitrate = 96
 	options.RawOutput = true
 
-	encodeSession, err := dca.EncodeFile(song.FileURL, options)
+	encodeSession, err := dca.EncodeFile(song.FileUrl, options)
 	if err != nil {
 		voiceChat.SendErrorPlaybackMessage(session, *song)
-		return errors.Errorf("Failed to create encoding session for %s (%s): %v", song.Query, song.FileURL, err)
+		return errors.Errorf("Failed to create encoding session for %s (%s): %v", song.Query, song.FileUrl, err)
 	}
 	defer encodeSession.Cleanup()
 
@@ -237,7 +232,7 @@ func (voiceChat *Connection) NewPlaybackMessage(session *discordgo.Session) erro
 						IconURL: session.State.User.AvatarURL("64x64"),
 					},
 					Title: title,
-					URL:   song.FileURL,
+					URL:   song.OriginalUrl,
 					Color: 2326507,
 					Fields: []*discordgo.MessageEmbedField{
 						{
@@ -279,9 +274,9 @@ func (voiceChat *Connection) TryRegenPlaybackMessage(session *discordgo.Session)
 		channel = voiceChat.NowPlaying.Message.ChannelID
 	}
 
-	var s = internal.Song{}
+	var song = internal.Song{}
 	if voiceChat.NowPlaying != nil && voiceChat.NowPlaying.Song != nil {
-		s = *voiceChat.NowPlaying.Song
+		song = *voiceChat.NowPlaying.Song
 	}
 
 	if id == "" {
@@ -305,11 +300,11 @@ func (voiceChat *Connection) TryRegenPlaybackMessage(session *discordgo.Session)
 		}
 
 		var title, author = "Loading...", "Loading..."
-		if s.Title != "" {
-			title = fmt.Sprintf("%s - [%d:%02d]", s.Title, s.Duration/60, s.Duration%60)
+		if song.Title != "" {
+			title = fmt.Sprintf("%s - [%d:%02d]", song.Title, song.Duration/60, song.Duration%60)
 		}
-		if s.Author != "" {
-			author = s.Author
+		if song.Author != "" {
+			author = song.Author
 		}
 
 		msg, err := session.ChannelMessageEditComplex(&discordgo.MessageEdit{
@@ -322,7 +317,7 @@ func (voiceChat *Connection) TryRegenPlaybackMessage(session *discordgo.Session)
 						IconURL: session.State.User.AvatarURL("64x64"),
 					},
 					Title: title,
-					URL:   s.FileURL,
+					URL:   song.OriginalUrl,
 					Color: 2326507,
 					Fields: []*discordgo.MessageEmbedField{
 						{
@@ -330,7 +325,7 @@ func (voiceChat *Connection) TryRegenPlaybackMessage(session *discordgo.Session)
 						},
 					},
 					Thumbnail: &discordgo.MessageEmbedThumbnail{
-						URL: s.ThumbnailUrl,
+						URL: song.ThumbnailUrl,
 					},
 					Footer: &discordgo.MessageEmbedFooter{
 						Text: "github.com/BulizhnikGames/discord-music-bot",

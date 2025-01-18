@@ -64,8 +64,9 @@ func Download(ctx context.Context, query string, res chan<- Result) {
 				Title:        videoMetadata.Title,
 				Author:       videoMetadata.Uploader,
 				Duration:     videoMetadata.Duration,
-				FileURL:      videoMetadata.URL,
+				OriginalUrl:  videoMetadata.OriginalURL,
 				ThumbnailUrl: videoMetadata.Thumbnail,
+				FileUrl:      videoMetadata.URL,
 				Query:        query,
 			}, nil}
 			return
