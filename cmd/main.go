@@ -15,8 +15,9 @@ import (
 
 // TODO: add /help
 
-// TODO: use cookies for searching age restricted content on Youtube
-// TODO: (only guild set in .env file could use cookies for security reasons)
+// TODO: download age restricted content
+
+// TODO: think of speeding up search for autocompletion
 
 func main() {
 	cfg := config.LoadConfig()

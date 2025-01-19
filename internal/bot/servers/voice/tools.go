@@ -33,7 +33,7 @@ func (voiceChat *Connection) DownloadSong(ctx context.Context, song *internal.So
 	}
 	log.Printf("Getting metadata of song: %s (%s)", song.Query, song.Title)
 	res := make(chan youtube.MetadataResult)
-	go youtube.GetMetadataWithContext(ctx, song.Query, res)
+	go youtube.GetMetadataWithContext(ctx, song.Query, voiceChat.VoiceConnection.GuildID, res)
 	select {
 	case data := <-res:
 		if data.Err != nil {

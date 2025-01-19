@@ -57,9 +57,9 @@ func play(server *servers.Server, interaction *discordgo.InteractionCreate) erro
 	}
 	var song *internal.Song
 	if playlist == nil {
-		song, err = youtube.GetMetadata(query)
+		song, err = youtube.GetMetadata(query, interaction.GuildID, false)
 		if err != nil || song == nil {
-			return errors.New("song not found").AddUser("couldn't find song")
+			return errors.Newf("song not found: %v", err).AddUser("couldn't find song")
 		}
 	}
 

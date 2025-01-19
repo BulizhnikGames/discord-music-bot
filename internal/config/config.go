@@ -11,6 +11,8 @@ const QUEUE_SIZE = 140
 const LINK_PREFIX = "https://www.youtube.com/watch?v="
 
 var Utils string
+var Cookies string
+var CookiesGuildID string
 
 type RedisConfig struct {
 	Url      string
@@ -67,6 +69,9 @@ func LoadConfig() Config {
 
 	cfg.Redis.Username = os.Getenv("DB_USERNAME")
 	cfg.Redis.Password = os.Getenv("DB_PASSWORD")
+
+	Cookies = os.Getenv("COOKIES")
+	CookiesGuildID = os.Getenv("COOKIES_GUILD_ID")
 
 	return cfg
 }
