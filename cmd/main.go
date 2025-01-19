@@ -7,7 +7,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions"
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions/middleware"
-	"github.com/BulizhnikGames/discord-music-bot/internal/youtube/api"
+	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/redis/go-redis/v9"
 	"os"
 	"os/signal"
@@ -17,10 +17,6 @@ import (
 
 // TODO: use cookies for searching age restricted content on Youtube
 // TODO: (only guild set in .env file could use cookies for security reasons)
-
-// TODO: auto complete play command with variants using yt-dlp
-
-// TODO: initially parse single songs when play command used
 
 func main() {
 	cfg := config.LoadConfig()
@@ -42,7 +38,7 @@ func main() {
 		"play",
 		middleware.DJOrAdminOnly(
 			middleware.ActiveChannelOnly(
-				interactions.PlayInteraction(api.NewService(cfg.SearchLimit)),
+				interactions.PlayInteraction(youtube.Search),
 				false,
 			),
 		),

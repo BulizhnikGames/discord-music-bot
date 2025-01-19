@@ -44,11 +44,6 @@ func LoadConfig() Config {
 		log.Fatal("App ID not found")
 	}
 
-	cfg.SearchLimit, err = strconv.Atoi(os.Getenv("SEARCH_LIMIT"))
-	if err != nil {
-		log.Fatalf("Incorrect search limit: %s", err)
-	}
-
 	Utils = os.Getenv("UTILS_PATH")
 	if Utils == "" {
 		log.Fatal("Utils not found")

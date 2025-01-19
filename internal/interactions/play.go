@@ -6,6 +6,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
+	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/bwmarrin/discordgo"
 	ytsearch "github.com/kkdai/youtube/v2"
 	"log"
@@ -13,11 +14,13 @@ import (
 	"time"
 )
 
-type searcher interface {
-	Search(query string, single bool) ([]string, error)
-}
+const SEARCH_LIMIT = 1
 
-func PlayInteraction(yt searcher) servers.InteractionFunc {
+// SearchFunc gets query for YouTube and cnt of search results and returns array of titles, and array of urls
+type SearchFunc func(query string, cnt int) ([]string, []string, error)
+
+// PlayInteraction must be initialized with search func which will be used to autocomplete /play command with search res
+func PlayInteraction(search SearchFunc) servers.InteractionFunc {
 	return func(server *servers.Server, interaction *discordgo.InteractionCreate) error {
 		switch interaction.Type {
 		case discordgo.InteractionApplicationCommand:
@@ -29,7 +32,7 @@ func PlayInteraction(yt searcher) servers.InteractionFunc {
 				err = nil
 			}
 			return err*/
-			_ = autoComplete(server, yt, interaction)
+			_ = autoComplete(server, search, interaction)
 			return nil
 		default:
 			return errors.Newf("unknown interaction type: %s", interaction.Type.String())
@@ -39,28 +42,24 @@ func PlayInteraction(yt searcher) servers.InteractionFunc {
 
 func play(server *servers.Server, interaction *discordgo.InteractionCreate) error {
 	data := interaction.ApplicationCommandData()
-	song := data.Options[0].StringValue()
+	query := data.Options[0].StringValue()
 
 	var playlist *ytsearch.Playlist
-	var videos []*ytsearch.PlaylistEntry
-	var metadata *ytsearch.Video
 	var err error
-	if strings.Contains(song, config.LINK_PREFIX) {
+	if strings.Contains(query, config.LINK_PREFIX) {
 		client := ytsearch.Client{}
-		playlist, err = client.GetPlaylist(song)
+		playlist, err = client.GetPlaylist(query)
 		if err == nil {
 			if len(playlist.Videos) > config.QUEUE_SIZE {
 				return errors.New("playlist is too big").AddUser("couldn't playlist to queue, because of it's too big")
 			}
-			videos = make([]*ytsearch.PlaylistEntry, len(playlist.Videos))
-			for i, video := range playlist.Videos {
-				videos[i] = video
-			}
-		} else {
-			metadata, err = client.GetVideo(song)
-			if err != nil {
-				log.Printf("Error getting video metadata: %s", err)
-			}
+		}
+	}
+	var song *internal.Song
+	if playlist == nil {
+		song, err = youtube.GetMetadata(query)
+		if err != nil || song == nil {
+			return errors.New("song not found").AddUser("couldn't find song")
 		}
 	}
 
@@ -76,20 +75,11 @@ func play(server *servers.Server, interaction *discordgo.InteractionCreate) erro
 	}
 	//log.Printf("got voice chat")
 
-	if len(videos) == 0 {
-		if metadata == nil {
-			voiceChat.InsertQueue(internal.Song{Query: song})
-		} else {
-			voiceChat.InsertQueue(internal.Song{
-				Title:    metadata.Title,
-				Author:   metadata.Author,
-				Query:    song,
-				Duration: int(metadata.Duration / time.Second),
-			})
-		}
+	if playlist == nil {
+		voiceChat.InsertQueue(*song)
 	} else {
 		go func() {
-			for _, video := range videos {
+			for _, video := range playlist.Videos {
 				voiceChat.InsertQueue(internal.Song{
 					Title:    video.Title,
 					Author:   video.Author,
@@ -100,49 +90,34 @@ func play(server *servers.Server, interaction *discordgo.InteractionCreate) erro
 		}()
 	}
 
-	if len(videos) == 0 {
-		if metadata == nil {
-			responseToInteraction(server.Session, interaction, "✅  added to queue  ✅", song)
-		} else {
-			title := fmt.Sprintf(
-				"%s - [%d:%02d]",
-				metadata.Title,
-				int(metadata.Duration/time.Second)/60,
-				int(metadata.Duration/time.Second)%60,
-			)
-			if len(metadata.Thumbnails) == 0 {
-				responseToInteraction(
-					server.Session,
-					interaction,
-					"✅  added to queue  ✅",
-					title,
-					song,
-					metadata.Author,
-				)
-			} else {
-				responseToInteraction(
-					server.Session,
-					interaction,
-					"✅  added to queue  ✅",
-					title,
-					song,
-					metadata.Author,
-					metadata.Thumbnails[0].URL,
-				)
-			}
-		}
+	if playlist == nil {
+		title := fmt.Sprintf(
+			"%s - [%d:%02d]",
+			song.Title,
+			song.Duration/60,
+			song.Duration%60,
+		)
+		responseToInteraction(
+			server.Session,
+			interaction,
+			"✅  added to queue  ✅",
+			title,
+			song.OriginalUrl,
+			song.Author,
+			song.ThumbnailUrl,
+		)
 	} else {
-		var title = song
+		var title = query
 		if playlist.Title != "" {
 			title = playlist.Title
 		}
-		if len(videos[0].Thumbnails) == 0 {
+		if len(playlist.Videos[0].Thumbnails) == 0 {
 			responseToInteraction(
 				server.Session,
 				interaction,
 				"✅  added to queue  ✅",
 				title,
-				song,
+				query,
 				playlist.Author,
 			)
 		} else {
@@ -151,9 +126,9 @@ func play(server *servers.Server, interaction *discordgo.InteractionCreate) erro
 				interaction,
 				"✅  added to queue  ✅",
 				title,
-				song,
+				query,
 				playlist.Author,
-				videos[0].Thumbnails[0].URL,
+				playlist.Videos[0].Thumbnails[0].URL,
 			)
 		}
 	}
@@ -161,34 +136,33 @@ func play(server *servers.Server, interaction *discordgo.InteractionCreate) erro
 	return nil
 }
 
-func autoComplete(server *servers.Server, yt searcher, interaction *discordgo.InteractionCreate) error {
+func autoComplete(server *servers.Server, search SearchFunc, interaction *discordgo.InteractionCreate) error {
 	data := interaction.ApplicationCommandData()
 	input := data.Options[0].StringValue()
 	if input == "" {
 		return nil
 	}
 
-	choices := make([]*discordgo.ApplicationCommandOptionChoice, 0)
+	choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, SEARCH_LIMIT)
 	if strings.HasPrefix(input, config.LINK_PREFIX) {
 		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
 			Name:  input,
 			Value: input,
 		})
 	} else {
-		results, err := yt.Search(input, false)
+		titles, urls, err := search(input, SEARCH_LIMIT)
 		if err != nil {
 			return errors.Newf("Error getting YT videos by with name %s: %s \n", input, err)
 		}
-		//log.Printf("Got %v names from search", len(*results))
-		if len(results) == 0 {
+		log.Printf("Got %v names from search (%s)", len(titles), input)
+		if len(titles) == 0 {
 			return errors.New("YT videos not found")
 		}
 
-		for _, result := range results {
-			idx := strings.Index(result, ":")
+		for i := 0; i < min(len(titles), len(urls)); i++ {
 			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-				Name:  result[idx+1:],
-				Value: config.LINK_PREFIX + result[:idx],
+				Name:  titles[i],
+				Value: urls[i],
 			})
 		}
 	}

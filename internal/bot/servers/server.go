@@ -58,45 +58,51 @@ func (server *Server) Run(initResp ResponseFunc) {
 			}
 		}
 		if handler, ok := server.interactions[name]; ok {
-			go func() {
-				go initResp(server.Session, interaction)
-				err := handler(server, interaction)
-				if err != nil {
-					var userErr, logErr error
-					if det, ok := err.(*errors.DetailedError); ok {
-						userErr = det.User
-						logErr = det.Log
-					} else {
-						logErr = err
-						userErr = errors.New("internal error")
-					}
-					log.Printf(
-						"Error executing interaction (%s %s): %s",
-						name,
-						interaction.Type.String(),
-						logErr.Error(),
-					)
-					if interaction.Type == discordgo.InteractionApplicationCommand {
-						resp := fmt.Sprintf("❌  %s  ❌", userErr.Error())
-						_, _ = server.Session.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
-							Embeds: &[]*discordgo.MessageEmbed{
-								{
-									Author: &discordgo.MessageEmbedAuthor{
-										Name:    resp,
-										IconURL: interaction.Member.User.AvatarURL("64x64"),
-									},
-									Color: 2326507,
-									Footer: &discordgo.MessageEmbedFooter{
-										Text: "github.com/BulizhnikGames/discord-music-bot",
-									},
-								},
-							},
-						})
-					}
-				}
-			}()
+			go initResp(server.Session, interaction)
+			if interaction.Type == discordgo.InteractionApplicationCommandAutocomplete {
+				go server.Handle(handler, interaction, name)
+			} else {
+				server.Handle(handler, interaction, name)
+			}
 		} else {
 			log.Printf("Error: no such command: %s", name)
+		}
+	}
+}
+
+func (server *Server) Handle(handler InteractionFunc, interaction *discordgo.InteractionCreate, name string) {
+	err := handler(server, interaction)
+	if err != nil {
+		var userErr, logErr error
+		if det, ok := err.(*errors.DetailedError); ok {
+			userErr = det.User
+			logErr = det.Log
+		} else {
+			logErr = err
+			userErr = errors.New("internal error")
+		}
+		log.Printf(
+			"Error executing interaction (%s %s): %s",
+			name,
+			interaction.Type.String(),
+			logErr.Error(),
+		)
+		if interaction.Type == discordgo.InteractionApplicationCommand {
+			resp := fmt.Sprintf("❌  %s  ❌", userErr.Error())
+			_, _ = server.Session.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
+				Embeds: &[]*discordgo.MessageEmbed{
+					{
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    resp,
+							IconURL: interaction.Member.User.AvatarURL("64x64"),
+						},
+						Color: 2326507,
+						Footer: &discordgo.MessageEmbedFooter{
+							Text: "github.com/BulizhnikGames/discord-music-bot",
+						},
+					},
+				},
+			})
 		}
 	}
 }
