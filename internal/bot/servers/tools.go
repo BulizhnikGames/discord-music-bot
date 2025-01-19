@@ -5,6 +5,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
+	"strings"
 )
 
 func (server *Server) SetDJRole(id string) error {
@@ -19,7 +20,7 @@ func (server *Server) DeleteDJRole() error {
 func (server *Server) GetDJRole() (string, bool, error) {
 	res, err := server.db.Get(context.Background(), "dj:"+server.GuildID).Result()
 	if err != nil {
-		if err == redis.Nil {
+		if err == redis.Nil || strings.Contains(err.Error(), "No connection could be made") {
 			return "", false, nil
 		}
 		return "", false, err
