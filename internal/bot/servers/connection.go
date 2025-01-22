@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const VOICE_TIMEOUT = 1 * time.Minute
+const VOICE_TIMEOUT = 30 * time.Minute
 
 // JoinVoiceChat bot joins voice chat if it isn't already in one.
 // If bot is already in voice chat:
