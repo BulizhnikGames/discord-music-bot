@@ -61,15 +61,17 @@ func (server *Server) JoinVoiceChat(guildID, voiceChannel, textChannel string) (
 
 func (server *Server) LeaveAfterTimeout(updateTimer <-chan struct{}) {
 	timer := time.NewTimer(VOICE_TIMEOUT)
-	select {
-	case <-timer.C:
-		err := server.LeaveVoiceChat()
-		if err != nil {
-			log.Printf("Couldn't leave voice chat after reaching timeout: %v", err)
+	for {
+		select {
+		case <-timer.C:
+			err := server.LeaveVoiceChat()
+			if err != nil {
+				log.Printf("Couldn't leave voice chat after reaching timeout: %v", err)
+			}
+			return
+		case <-updateTimer:
+			timer = time.NewTimer(VOICE_TIMEOUT)
 		}
-		return
-	case <-updateTimer:
-		timer = time.NewTimer(VOICE_TIMEOUT)
 	}
 }
 

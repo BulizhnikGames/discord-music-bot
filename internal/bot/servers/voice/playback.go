@@ -72,7 +72,8 @@ func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.S
 				}
 			}
 			voiceChat.Mutex.Unlock()
-			log.Printf("Playing song %s (%s)", song.Title, song.FileUrl)
+			//log.Printf("Playing song %s (%s)", song.Title, song.FileUrl)
+			log.Printf("Playing song %s", song.Title)
 			err := voiceChat.playSong(voiceChat.playbackContext, session, song)
 			if err != nil {
 				log.Printf("Error playing song: %s", err.Error())
@@ -116,7 +117,7 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 		defer voiceChat.Mutex.Unlock()
 
 		// delete or set text only if queue isn't empty otherwise notify user about it
-		if voiceChat.Queue.Len > 0 {
+		if voiceChat.Queue.Len() > 0 {
 			if setText == "" {
 				voiceChat.DeletePlaybackMessage(session)
 			} else {
@@ -132,6 +133,7 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 
 		voiceChat.NowPlaying = nil
 		cancel()
+
 		if voiceChat.Loop == 2 {
 			return
 		}
@@ -142,7 +144,7 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 		if ok {
 			cache.Cnt--
 			if voiceChat.Loop == 0 && cache.Cnt <= 0 {
-				encodeSession.Cleanup()
+				//encodeSession.Cleanup()
 				delete(voiceChat.Cache.Data, song.Query)
 			}
 		}

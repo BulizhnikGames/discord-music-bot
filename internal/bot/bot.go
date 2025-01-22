@@ -23,34 +23,7 @@ func Init(cfg config.Config, db *redis.Client, respFunc servers.ResponseFunc) *D
 	}
 
 	_, err = session.ApplicationCommandBulkOverwrite(cfg.AppID, "", []*discordgo.ApplicationCommand{
-		{
-			Name:        "play",
-			Description: "play YT video by name or URL",
-			Type:        discordgo.ChatApplicationCommand,
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Name:         "name",
-					Description:  "name or url of the video",
-					Type:         discordgo.ApplicationCommandOptionString,
-					Required:     true,
-					Autocomplete: true,
-				},
-			},
-		},
-		{
-			Name:        "loop",
-			Description: "0 - no loop, 1 - loop queue, 2 - loop current song",
-			Type:        discordgo.ChatApplicationCommand,
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Name:         "arg",
-					Description:  "loop command argument",
-					Type:         discordgo.ApplicationCommandOptionInteger,
-					Required:     true,
-					Autocomplete: true,
-				},
-			},
-		},
+		{Name: "clear", Description: "clear playback queue", Type: discordgo.ChatApplicationCommand},
 		{
 			Name:        "dj-mode",
 			Description: "set dj mode, only members with dj role can manipulate queue and playback",
@@ -66,15 +39,43 @@ func Init(cfg config.Config, db *redis.Client, respFunc servers.ResponseFunc) *D
 			},
 		},
 		{Name: "dj-off", Description: "turn off dj-mode", Type: discordgo.ChatApplicationCommand},
+		{Name: "help", Description: "get list of commands and their meanings", Type: discordgo.ChatApplicationCommand},
 		{Name: "leave", Description: "leave voice chat", Type: discordgo.ChatApplicationCommand},
-		{Name: "clear", Description: "clear playback queue", Type: discordgo.ChatApplicationCommand},
-		{Name: "stop", Description: "clear playback queue", Type: discordgo.ChatApplicationCommand},
-		{Name: "skip", Description: "skip current song", Type: discordgo.ChatApplicationCommand},
-		{Name: "shuffle", Description: "shuffle queue", Type: discordgo.ChatApplicationCommand},
-		{Name: "queue", Description: "get songs in queue", Type: discordgo.ChatApplicationCommand},
+		{
+			Name:        "loop",
+			Description: "0 - no loop, 1 - loop queue, 2 - loop current song",
+			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "arg",
+					Description:  "loop command argument",
+					Type:         discordgo.ApplicationCommandOptionInteger,
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		},
 		{Name: "nowplaying", Description: "get current song", Type: discordgo.ChatApplicationCommand},
 		{Name: "pause", Description: "pause playback", Type: discordgo.ChatApplicationCommand},
+		{
+			Name:        "play",
+			Description: "play YT video by name or URL",
+			Type:        discordgo.ChatApplicationCommand,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:         "name",
+					Description:  "name or url of the video",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+			},
+		},
+		{Name: "queue", Description: "get songs in queue", Type: discordgo.ChatApplicationCommand},
 		{Name: "resume", Description: "resume playback", Type: discordgo.ChatApplicationCommand},
+		{Name: "shuffle", Description: "shuffle queue", Type: discordgo.ChatApplicationCommand},
+		{Name: "skip", Description: "skip current song", Type: discordgo.ChatApplicationCommand},
+		{Name: "stop", Description: "clear playback queue", Type: discordgo.ChatApplicationCommand},
 	})
 	if err != nil {
 		log.Fatalf("Error initializing application's slash interactions: %s", err)

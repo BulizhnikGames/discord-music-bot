@@ -9,7 +9,6 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/go-faster/errors"
 	"io"
-	"log"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -28,9 +27,14 @@ func GetMetadataWithContext(ctx context.Context, query, guildID string, res chan
 	res <- MetadataResult{song, err}
 }
 
+/*func canUseCookies(guildID string) bool {
+	return config.config.CookiesGuildID == "" || config.CookiesGuildID == guildID
+}*/
+
 func GetMetadata(query, guildID string, tryCookies bool) (*internal.Song, error) {
+	ytdlpQuery := query
 	if !strings.HasPrefix(query, config.LINK_PREFIX) {
-		query = fmt.Sprintf("ytsearch1:%s", strings.ReplaceAll(query, "\"", ""))
+		ytdlpQuery = fmt.Sprintf("ytsearch1:%s", strings.ReplaceAll(query, "\"", ""))
 	}
 	args := []string{
 		"-f", "bestaudio",
@@ -40,14 +44,14 @@ func GetMetadata(query, guildID string, tryCookies bool) (*internal.Song, error)
 		//"--match-filter", fmt.Sprintf("duration < %d & !is_live", 20*60),
 		"--skip-download",
 		"--print-json",
-		query,
+		ytdlpQuery,
 	}
 	//log.Printf("yt-dlp %s", strings.Join(args, " "))
 	var commandPath = "yt-dlp"
 	if config.Utils != "" {
 		commandPath = config.Utils + "yt-dlp.exe"
 	}
-	var cmd *exec.Cmd
+	/*var cmd *exec.Cmd
 	if tryCookies {
 		cookiesArgs := []string{
 			"--cookies", config.Cookies,
@@ -57,12 +61,13 @@ func GetMetadata(query, guildID string, tryCookies bool) (*internal.Song, error)
 	} else {
 		cmd = exec.Command(commandPath, args...)
 	}
-	log.Println(strings.Join(cmd.Args, " "))
+	log.Println(strings.Join(cmd.Args, " "))*/
+	cmd := exec.Command(commandPath, args...)
 	if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
 		// Try cookies only if this try was without them
-		if err.Error() == "exit status 1" && !tryCookies && config.Cookies != "" && config.CookiesGuildID == guildID {
+		/*if err.Error() == "exit status 1" && !tryCookies && config.Cookies != "" && canUseCookies(guildID) {
 			return GetMetadata(query, guildID, true)
-		}
+		}*/
 		return nil, errors.Errorf("failed to get metadata of song (query %s): %v", query, err)
 	} else {
 		videoMetadata := internal.VideoMetadata{}

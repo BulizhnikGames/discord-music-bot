@@ -17,7 +17,7 @@ type node struct {
 
 type MusicQueue struct {
 	firstNode, readNode, writeNode, handleNode *node
-	Len, Cap                                   int
+	len, Cap                                   int
 	mutex                                      *sync.RWMutex
 	WriteHandler                               func(ctx context.Context, val *Song) (*Song, error)
 	topCtx                                     context.Context
@@ -54,6 +54,12 @@ func CreateCycleQueue(ctx context.Context, size int) *MusicQueue {
 		tryHandleSignal: make(chan struct{}, size),
 		NewHandled:      make(chan struct{}, size),
 	}
+}
+
+func (queue *MusicQueue) Len() int {
+	queue.mutex.RLock()
+	defer queue.mutex.RUnlock()
+	return queue.len
 }
 
 func (queue *MusicQueue) SetHandler(handler func(ctx context.Context, val *Song) (*Song, error)) {
@@ -128,7 +134,7 @@ func (queue *MusicQueue) handleElement(ctx context.Context, listNode *node) {
 	}
 	processed, err := queue.WriteHandler(ctx, val)
 	if err != nil {
-		log.Printf("couldn't handle new element: %v", err)
+		log.Printf("couldn't handle new element (%s): %v", val.Query, err)
 	}
 	select {
 	case <-ctx.Done():
@@ -154,7 +160,7 @@ func (queue *MusicQueue) Write(v Song) {
 	}
 	queue.writeNode.val = &v
 	//log.Printf("written at %d", queue.writeNode.idx)
-	queue.Len++
+	queue.len++
 	queue.writeNode = queue.writeNode.next
 	queue.askHandle()
 }
@@ -162,13 +168,13 @@ func (queue *MusicQueue) Write(v Song) {
 func (queue *MusicQueue) ReadHandled() *Song {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
-	if queue.readNode.val == nil {
+	if queue.readNode.val == nil || !queue.readNode.handled {
 		return nil
 	}
 	valCopy := *queue.readNode.val
 	queue.readNode.val = nil
 	queue.readNode.handled = false
-	queue.Len--
+	queue.len--
 	queue.readNode = queue.readNode.next
 	return &valCopy
 }
@@ -186,7 +192,7 @@ func (queue *MusicQueue) Clear() {
 		remover = remover.next
 	}
 	queue.stopHandlers()
-	queue.Len = 0
+	queue.len = 0
 }
 
 func (queue *MusicQueue) All() iter.Seq[Song] {
@@ -211,11 +217,11 @@ func (queue *MusicQueue) Shuffle() {
 	queue.mutex.Lock()
 	defer queue.mutex.Unlock()
 
-	if queue.Len == 0 {
+	if queue.len == 0 {
 		return
 	}
 
-	nodes := make([]*node, 0, queue.Len)
+	nodes := make([]*node, 0, queue.len)
 	reader := queue.readNode
 
 	for reader.val != nil {

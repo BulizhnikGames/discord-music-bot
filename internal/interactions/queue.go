@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 func QueueInteraction(server *servers.Server, interaction *discordgo.InteractionCreate) error {
 	switch interaction.Type {
@@ -86,7 +86,6 @@ func getPage(interaction *discordgo.InteractionCreate) (int, error) {
 }
 
 func respWithQueuePage(session *discordgo.Session, inter *discordgo.InteractionCreate, queue []string, page int) {
-	log.Printf("queue page: %d", page)
 	if page < 0 {
 		return
 	}
@@ -140,12 +139,17 @@ func respToQueueInter(sess *discordgo.Session, inter *discordgo.InteractionCreat
         }`)
 	}
 
-	line, err := discordgo.MessageComponentFromJSON(voice.ConstructJsonLine(rawComps...))
-	if err != nil {
-		return
+	var components []discordgo.MessageComponent
+	if len(rawComps) > 0 {
+		line, err := discordgo.MessageComponentFromJSON(voice.ConstructJsonLine(rawComps...))
+		if err != nil {
+			log.Printf("failed to construct json line to respond to load queue page: %v", err)
+			return
+		}
+		components = append(components, line)
 	}
 
-	_, err = sess.InteractionResponseEdit(inter.Interaction, &discordgo.WebhookEdit{
+	_, err := sess.InteractionResponseEdit(inter.Interaction, &discordgo.WebhookEdit{
 		Embeds: &[]*discordgo.MessageEmbed{
 			{
 				Author: &discordgo.MessageEmbedAuthor{
@@ -159,9 +163,7 @@ func respToQueueInter(sess *discordgo.Session, inter *discordgo.InteractionCreat
 				},
 			},
 		},
-		Components: &[]discordgo.MessageComponent{
-			line,
-		},
+		Components: &components,
 	})
 	if err != nil {
 		log.Printf("Failed to respond to queue interaction: %v", err)
@@ -188,7 +190,7 @@ func NowPlayingInteraction(server *servers.Server, interaction *discordgo.Intera
 					song.Duration/60,
 					song.Duration%60,
 				),
-				song.FileUrl,
+				song.OriginalUrl,
 				fmt.Sprintf("by %s", song.Author),
 				song.ThumbnailUrl,
 			)

@@ -61,7 +61,7 @@ func (server *Server) GetQueue() ([]string, error) {
 			}
 			return []string{nowPlaying.Title}, nil
 		}
-		res := make([]string, 0, server.VoiceChat.Queue.Len+1)
+		res := make([]string, 0, server.VoiceChat.Queue.Len()+1)
 		for song := range server.VoiceChat.Queue.All() {
 			if song.Title != "" && song.Duration != 0 && song.Author != "" {
 				res = append(res, fmt.Sprintf(

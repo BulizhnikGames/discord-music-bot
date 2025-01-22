@@ -9,7 +9,6 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/bwmarrin/discordgo"
 	ytsearch "github.com/kkdai/youtube/v2"
-	"log"
 	"strings"
 	"time"
 )
@@ -154,7 +153,7 @@ func autoComplete(server *servers.Server, search SearchFunc, interaction *discor
 		if err != nil {
 			return errors.Newf("Error getting YT videos by with name %s: %s \n", input, err)
 		}
-		log.Printf("Got %v names from search (%s)", len(titles), input)
+		//log.Printf("Got %v names from search (%s)", len(titles), input)
 		if len(titles) == 0 {
 			return errors.New("YT videos not found")
 		}

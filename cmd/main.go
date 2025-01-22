@@ -13,9 +13,7 @@ import (
 	"os/signal"
 )
 
-// TODO: add /help
-
-// TODO: download age restricted content
+// TODO: handle age restricted content
 
 // TODO: think of speeding up search for autocompletion
 
@@ -35,6 +33,14 @@ func main() {
 		return middleware.DJOrAdminOnly(middleware.ActiveChannelOnly(next, true))
 	}
 
+	discordBot.RegisterCommand("clear", djMustInChannel(interactions.ClearInteraction))
+	discordBot.RegisterCommand("dj-mode", middleware.AdminOnly(interactions.DJModeInteraction))
+	discordBot.RegisterCommand("dj-off", middleware.AdminOnly(interactions.NoDJInteraction))
+	discordBot.RegisterCommand("help", interactions.HelpInteraction)
+	discordBot.RegisterCommand("leave", djMustInChannel(interactions.LeaveInteraction))
+	discordBot.RegisterCommand("loop", djMustInChannel(interactions.LoopInteraction))
+	discordBot.RegisterCommand("nowplaying", middleware.ActiveChannelOnly(interactions.NowPlayingInteraction, false))
+	discordBot.RegisterCommand("pause", djMustInChannel(interactions.PauseInteraction))
 	discordBot.RegisterCommand(
 		"play",
 		middleware.DJOrAdminOnly(
@@ -44,18 +50,11 @@ func main() {
 			),
 		),
 	)
-	discordBot.RegisterCommand("leave", djMustInChannel(interactions.LeaveInteraction))
-	discordBot.RegisterCommand("clear", djMustInChannel(interactions.ClearInteraction))
-	discordBot.RegisterCommand("stop", djMustInChannel(interactions.ClearInteraction))
-	discordBot.RegisterCommand("skip", djMustInChannel(interactions.SkipInteraction))
-	discordBot.RegisterCommand("shuffle", djMustInChannel(interactions.ShuffleInteraction))
 	discordBot.RegisterCommand("queue", middleware.ActiveChannelOnly(interactions.QueueInteraction, false))
-	discordBot.RegisterCommand("nowplaying", middleware.ActiveChannelOnly(interactions.NowPlayingInteraction, false))
-	discordBot.RegisterCommand("loop", djMustInChannel(interactions.LoopInteraction))
-	discordBot.RegisterCommand("pause", djMustInChannel(interactions.PauseInteraction))
 	discordBot.RegisterCommand("resume", djMustInChannel(interactions.ResumeInteraction))
-	discordBot.RegisterCommand("dj-mode", middleware.AdminOnly(interactions.DJModeInteraction))
-	discordBot.RegisterCommand("dj-off", middleware.AdminOnly(interactions.NoDJInteraction))
+	discordBot.RegisterCommand("shuffle", djMustInChannel(interactions.ShuffleInteraction))
+	discordBot.RegisterCommand("skip", djMustInChannel(interactions.SkipInteraction))
+	discordBot.RegisterCommand("stop", djMustInChannel(interactions.ClearInteraction))
 
 	discordBot.RegisterCommand("loop0", djMustInChannel(interactions.Loop0))
 	discordBot.RegisterCommand("loop1", djMustInChannel(interactions.Loop1))
