@@ -1,8 +1,4 @@
 .env
-secret.json
 .idea
-storage
-storage/
-utils
+tools
 musicbot.exe
-cookies.txt
