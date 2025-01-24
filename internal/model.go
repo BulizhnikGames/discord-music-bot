@@ -1,8 +1,8 @@
 package internal
 
 import (
+	"github.com/BulizhnikGames/dca"
 	"github.com/bwmarrin/discordgo"
-	"github.com/jogramming/dca"
 	"sync"
 )
 

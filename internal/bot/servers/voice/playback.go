@@ -3,11 +3,11 @@ package voice
 import (
 	"context"
 	"fmt"
+	"github.com/BulizhnikGames/dca"
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-faster/errors"
-	"github.com/jogramming/dca"
 	"io"
 	"log"
 	"sync"
