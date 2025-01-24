@@ -38,6 +38,14 @@ func New(s *discordgo.Session, iMap map[string]InteractionFunc, id string, db *r
 }
 
 func (server *Server) Run(initResp ResponseFunc) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			log.Printf("panic recovered: %v", err)
+			server.Run(initResp)
+		}
+	}()
+
 	for interaction := range server.Interactions {
 		var name string
 		switch interaction.Type {
