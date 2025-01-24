@@ -1,8 +1,14 @@
-[Русский](#Создание-собственной-копии-бота)
+[Русский](#Как-пользоваться)
 
-[English](#Create-your-own-replica-of-bot)
+[English](#Guide)
 
-# Создание собственной копии бота
+# Как пользоваться
+
+## Добавление моего бота на ваш сервер
+
+### Просто перейдите по [ссылке](https://discord.com/oauth2/authorize?client_id=1332373974729887744&permissions=274881149952&integration_type=0&scope=applications.commands+bot)
+
+## Создание собственной копии бота
 
 * ### Скачайте исходный код и скомпилируйте его
 
@@ -31,9 +37,15 @@ DB_PASSWORD=
 ```
 
 * ### Запустите бота
-Важно: у меня бот не работает при использовании [zapret](https://github.com/Flowseal/zapret-discord-youtube), с впн всё работает нормально, другие способы не проверял
+**Важно:** у меня бот не работает при использовании [zapret](https://github.com/Flowseal/zapret-discord-youtube), с впн всё работает нормально, другие способы не проверял
 
-# Create your own replica of bot
+# Guide
+
+## Add my bot to your discord server
+
+### Just follow the [link](https://discord.com/oauth2/authorize?client_id=1332373974729887744&permissions=274881149952&integration_type=0&scope=applications.commands+bot)
+
+## Create your own replica of bot
 
 * ### Install source code and build it
 
