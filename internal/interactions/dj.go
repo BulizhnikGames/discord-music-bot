@@ -5,6 +5,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/bwmarrin/discordgo"
+	"log"
 )
 
 func DJModeInteraction(server *servers.Server, interaction *discordgo.InteractionCreate) error {
@@ -16,7 +17,12 @@ func DJModeInteraction(server *servers.Server, interaction *discordgo.Interactio
 		if err != nil {
 			return err
 		}
-		responseToInteraction(server.Session, interaction, fmt.Sprintf("🥁  DJ role is set to <@&%s>  🥁", role.ID))
+		responseToDJInteraction(
+			server.Session,
+			interaction,
+			"🥁  DJ role is set  🥁",
+			fmt.Sprintf("You must have <@&%s> role to manipulate playback", role.ID),
+		)
 		return nil
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		guildID := interaction.GuildID
@@ -57,9 +63,38 @@ func NoDJInteraction(server *servers.Server, interaction *discordgo.InteractionC
 		if err != nil {
 			return err
 		}
-		responseToInteraction(server.Session, interaction, fmt.Sprintf("🥁  DJ role unseted  🥁"))
+		responseToDJInteraction(
+			server.Session,
+			interaction,
+			"🥁  DJ role unset  🥁",
+			"Now you don't need specific role to manipulate playback",
+		)
 		return nil
 	default:
 		return errors.Newf("unknown interaction type: %s", interaction.Type.String())
+	}
+}
+
+func responseToDJInteraction(session *discordgo.Session, interaction *discordgo.InteractionCreate, elems ...string) {
+	for len(elems) < 2 {
+		elems = append(elems, "")
+	}
+	_, err := session.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
+		Embeds: &[]*discordgo.MessageEmbed{
+			{
+				Author: &discordgo.MessageEmbedAuthor{
+					Name:    elems[0],
+					IconURL: interaction.Member.User.AvatarURL("64x64"),
+				},
+				Description: elems[1],
+				Color:       2326507,
+				Footer: &discordgo.MessageEmbedFooter{
+					Text: "github.com/BulizhnikGames/discord-music-bot",
+				},
+			},
+		},
+	})
+	if err != nil {
+		log.Printf("Failed to respond to interaction (with text %s): %v", elems[0], err)
 	}
 }

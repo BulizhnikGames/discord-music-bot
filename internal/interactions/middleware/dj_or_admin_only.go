@@ -20,6 +20,7 @@ func DJOrAdminOnly(next servers.InteractionFunc) servers.InteractionFunc {
 					return next(server, interaction)
 				}
 				flag := false
+				//log.Printf("%+v", interaction.Member.Roles)
 				for _, role := range interaction.Member.Roles {
 					if role == djRole {
 						flag = true

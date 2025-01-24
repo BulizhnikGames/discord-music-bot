@@ -41,7 +41,7 @@ func GetMetadata(query, guildID string, tryCookies bool) (*internal.Song, error)
 		"--max-downloads", "1",
 		"--no-playlist",
 		"--quiet",
-		//"--match-filter", fmt.Sprintf("duration < %d & !is_live", 20*60),
+		"--match-filter", fmt.Sprintf("duration < %d & !is_live", 20*60),
 		"--skip-download",
 		"--print-json",
 		ytdlpQuery,
