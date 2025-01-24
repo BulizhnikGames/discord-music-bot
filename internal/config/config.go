@@ -10,7 +10,7 @@ import (
 const QUEUE_SIZE = 140
 const LINK_PREFIX = "https://www.youtube.com/watch?v="
 
-var Utils string
+var Tools string
 
 //var Cookies string
 //var CookiesGuildID string
@@ -47,12 +47,12 @@ func LoadConfig() Config {
 		log.Fatal("App ID not found")
 	}
 
-	Utils = os.Getenv("UTILS_PATH")
-	if Utils == "" {
-		log.Fatal("Utils not found")
+	Tools = os.Getenv("TOOLS_PATH")
+	if Tools == "" {
+		log.Fatal("Tools not found")
 	}
-	if Utils[len(Utils)-1] != '/' {
-		Utils = Utils + "/"
+	if Tools[len(Tools)-1] != '/' {
+		Tools = Tools + "/"
 	}
 
 	cfg.Redis.Url = os.Getenv("DB_URL")

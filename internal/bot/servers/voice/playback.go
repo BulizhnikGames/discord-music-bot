@@ -95,7 +95,7 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 	options.BufferedFrames = 100
 	options.FrameDuration = 20
 	//options.CompressionLevel = 5
-	options.Path = config.Utils
+	options.Path = config.Tools
 	options.Bitrate = 96
 	options.RawOutput = true
 

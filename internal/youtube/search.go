@@ -48,8 +48,8 @@ func GetMetadata(query, guildID string, tryCookies bool) (*internal.Song, error)
 	}
 	//log.Printf("yt-dlp %s", strings.Join(args, " "))
 	var commandPath = "yt-dlp"
-	if config.Utils != "" {
-		commandPath = config.Utils + "yt-dlp.exe"
+	if config.Tools != "" {
+		commandPath = config.Tools + "yt-dlp.exe"
 	}
 	/*var cmd *exec.Cmd
 	if tryCookies {
@@ -99,8 +99,8 @@ func Search(query string, cnt int) ([]string, []string, error) {
 		fmt.Sprintf("ytsearch%d:%s", cnt, strings.ReplaceAll(query, "\"", "")),
 	}
 	var commandPath = "yt-dlp"
-	if config.Utils != "" {
-		commandPath = config.Utils + "yt-dlp.exe"
+	if config.Tools != "" {
+		commandPath = config.Tools + "yt-dlp.exe"
 	}
 	cmd := exec.Command(commandPath, args...)
 	if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
