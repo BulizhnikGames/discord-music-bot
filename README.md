@@ -7,7 +7,7 @@
 ## С помощью git
 
 ```shell
-git clone github.com/BulizhnikGames/discord-music-bot/cmd && cd discord-music-bot
+git clone https://github.com/BulizhnikGames/discord-music-bot && cd discord-music-bot
 go build ./cmd/main.go && ./main.exe
 ```
 
@@ -22,7 +22,7 @@ go install github.com/BulizhnikGames/discord-music-bot/cmd@latest
 ## Manually
 
 ```shell
-git clone github.com/BulizhnikGames/discord-music-bot/cmd && cd discord-music-bot
+git clone https://github.com/BulizhnikGames/discord-music-bot && cd discord-music-bot
 go build ./cmd/main.go && ./main.exe
 ```
 
