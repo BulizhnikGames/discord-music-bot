@@ -14,7 +14,7 @@ go build ./cmd/main.go && ./main.exe
 ## С помощью Go
 
 ```shell
-go install github.com/BulizhnikGames/discord-music-bot/cmd@latest
+go install github.com/BulizhnikGames/discord-music-bot/cmd/musicbot@latest
 ```
 
 # Installation
@@ -29,5 +29,5 @@ go build ./cmd/main.go && ./main.exe
 ## Install via Go
 
 ```shell
-go install github.com/BulizhnikGames/discord-music-bot/cmd@latest
+go install github.com/BulizhnikGames/discord-music-bot/cmd/musicbot@latest
 ```
