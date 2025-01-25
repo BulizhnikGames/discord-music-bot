@@ -117,7 +117,7 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 		defer voiceChat.Mutex.Unlock()
 
 		// delete or set text only if queue isn't empty otherwise notify user about it
-		if voiceChat.Queue.Len() > 0 || voiceChat.Loop == 2 {
+		if voiceChat.Queue.Len() > 0 || voiceChat.Loop != 0 {
 			if setText == "" {
 				voiceChat.DeletePlaybackMessage(session)
 			} else {
