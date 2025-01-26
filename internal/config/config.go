@@ -48,10 +48,7 @@ func LoadConfig() Config {
 	}
 
 	Tools = os.Getenv("TOOLS_PATH")
-	if Tools == "" {
-		log.Fatal("Tools not found")
-	}
-	if Tools[len(Tools)-1] != '/' {
+	if len(Tools) > 0 && Tools[len(Tools)-1] != '/' {
 		Tools = Tools + "/"
 	}
 

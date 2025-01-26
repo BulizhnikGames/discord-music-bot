@@ -3,7 +3,7 @@ module github.com/BulizhnikGames/discord-music-bot
 go 1.23.2
 
 require (
-	github.com/BulizhnikGames/dca v1.3.0
+	github.com/BulizhnikGames/dca v1.4.0
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/go-faster/errors v0.7.1
 	github.com/joho/godotenv v1.5.1

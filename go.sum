@@ -1,5 +1,7 @@
 github.com/BulizhnikGames/dca v1.3.0 h1:axt5rmmLSM+nnP2BcV7kArYF6SrSIidgXs94TbwpRXM=
 github.com/BulizhnikGames/dca v1.3.0/go.mod h1:gaoZm2RdBRZI5DHu8UZ4M8N1DM/VHI19M/mL7TX5UJ4=
+github.com/BulizhnikGames/dca v1.4.0 h1:n1KhkvaWS4ZLwpfO6hbW461LSxp1jg0NY4HFP4sak9A=
+github.com/BulizhnikGames/dca v1.4.0/go.mod h1:gaoZm2RdBRZI5DHu8UZ4M8N1DM/VHI19M/mL7TX5UJ4=
 github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0rYXWg0=
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
 github.com/bitly/go-simplejson v0.5.1 h1:xgwPbetQScXt1gh9BmoJ6j9JMr3TElvuIyjR8pgdoow=

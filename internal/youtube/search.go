@@ -10,6 +10,7 @@ import (
 	"github.com/go-faster/errors"
 	"io"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -49,7 +50,10 @@ func GetMetadata(query, guildID string, tryCookies bool) (*internal.Song, error)
 	//log.Printf("yt-dlp %s", strings.Join(args, " "))
 	var commandPath = "yt-dlp"
 	if config.Tools != "" {
-		commandPath = config.Tools + "yt-dlp.exe"
+		commandPath = config.Tools + "yt-dlp"
+		if runtime.GOOS == "windows" {
+			commandPath += ".exe"
+		}
 	}
 	/*var cmd *exec.Cmd
 	if tryCookies {
