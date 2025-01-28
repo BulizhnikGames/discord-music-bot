@@ -95,7 +95,7 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 	options := dca.StdEncodeOptions
 	options.BufferedFrames = 100
 	options.FrameDuration = 20
-	//options.CompressionLevel = 5
+	options.CompressionLevel = 5
 	options.Path = config.Tools
 	options.Bitrate = 96
 	options.RawOutput = true
@@ -164,7 +164,7 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 		return errors.Errorf("couldn't send playback message: %v", err)
 	}
 
-	voiceChat.Logger.Printf("Playing song %s", song.Title)
+	voiceChat.Logger.Printf("Playing song %s: %s", song.Title, song.FileUrl)
 
 	select {
 	case err = <-done:

@@ -112,3 +112,19 @@ func (server *Server) LeaveVoiceChat() error {
 		return errors.New("bot isn't in the voice chat")
 	}
 }
+
+func (server *Server) HandleLeave() {
+	_ = server.ClearQueue("⛔  left voice channel  ⛔")
+
+	server.VoiceChat.Mutex.Lock()
+	if server.VoiceChat.NowPlaying != nil {
+		server.VoiceChat.NowPlaying.EncodeSession.Cleanup()
+	}
+	server.VoiceChat.Mutex.Unlock()
+
+	server.VoiceChat.Leave()
+
+	server.VoiceChat = nil
+
+	server.Logger.Printf("Left voice chat (guild ID: %s)", server.GuildID)
+}

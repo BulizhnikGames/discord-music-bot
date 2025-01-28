@@ -118,7 +118,7 @@ func Init(cfg config.Config, db *redis.Client, respFunc servers.ResponseFunc) *D
 			bot.servers.Mutex.RLock()
 			defer bot.servers.Mutex.RUnlock()
 			if serv, ok := bot.servers.Data[update.GuildID]; ok {
-				_ = serv.TryLeaveVoiceChat()
+				serv.HandleLeave()
 			}
 		}
 	})
