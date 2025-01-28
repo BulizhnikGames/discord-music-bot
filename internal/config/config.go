@@ -7,10 +7,15 @@ import (
 	"strconv"
 )
 
-const QUEUE_SIZE = 140
-const LINK_PREFIX = "https://www.youtube.com/watch?v="
+const (
+	QUEUE_SIZE  = 140
+	LINK_PREFIX = "https://www.youtube.com/watch?v="
+)
 
-var Tools string
+var (
+	Tools string
+	Logs  string
+)
 
 //var Cookies string
 //var CookiesGuildID string
@@ -50,6 +55,11 @@ func LoadConfig() Config {
 	Tools = os.Getenv("TOOLS_PATH")
 	if len(Tools) > 0 && Tools[len(Tools)-1] != '/' {
 		Tools = Tools + "/"
+	}
+
+	Logs = os.Getenv("LOGS_PATH")
+	if len(Logs) > 0 && Logs[len(Logs)-1] != '/' {
+		Logs = Logs + "/"
 	}
 
 	cfg.Redis.Url = os.Getenv("DB_URL")

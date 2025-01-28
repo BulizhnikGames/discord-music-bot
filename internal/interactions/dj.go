@@ -5,7 +5,6 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/bwmarrin/discordgo"
-	"log"
 )
 
 func DJModeInteraction(server *servers.Server, interaction *discordgo.InteractionCreate) error {
@@ -18,7 +17,7 @@ func DJModeInteraction(server *servers.Server, interaction *discordgo.Interactio
 			return err
 		}
 		responseToDJInteraction(
-			server.Session,
+			server,
 			interaction,
 			"🥁  DJ role is set  🥁",
 			fmt.Sprintf("You must have <@&%s> role to manipulate playback", role.ID),
@@ -64,7 +63,7 @@ func NoDJInteraction(server *servers.Server, interaction *discordgo.InteractionC
 			return err
 		}
 		responseToDJInteraction(
-			server.Session,
+			server,
 			interaction,
 			"🥁  DJ role unset  🥁",
 			"Now you don't need specific role to manipulate playback",
@@ -75,11 +74,11 @@ func NoDJInteraction(server *servers.Server, interaction *discordgo.InteractionC
 	}
 }
 
-func responseToDJInteraction(session *discordgo.Session, interaction *discordgo.InteractionCreate, elems ...string) {
+func responseToDJInteraction(server *servers.Server, interaction *discordgo.InteractionCreate, elems ...string) {
 	for len(elems) < 2 {
 		elems = append(elems, "")
 	}
-	_, err := session.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
+	_, err := server.Session.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
 		Embeds: &[]*discordgo.MessageEmbed{
 			{
 				Author: &discordgo.MessageEmbedAuthor{
@@ -95,6 +94,6 @@ func responseToDJInteraction(session *discordgo.Session, interaction *discordgo.
 		},
 	})
 	if err != nil {
-		log.Printf("Failed to respond to interaction (with text %s): %v", elems[0], err)
+		server.Logger.Printf("Failed to respond to interaction (with text %s): %v", elems[0], err)
 	}
 }

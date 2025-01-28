@@ -3,17 +3,19 @@ package servers
 import (
 	"fmt"
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers/voice"
+	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
 	"github.com/bwmarrin/discordgo"
 	"github.com/redis/go-redis/v9"
 	"log"
+	"os"
 	"strings"
 )
 
 type InteractionFunc func(server *Server, interaction *discordgo.InteractionCreate) error
 type InteractionMiddleware func(next InteractionFunc, arg any) InteractionFunc
 
-type ResponseFunc func(*discordgo.Session, *discordgo.InteractionCreate)
+type ResponseFunc func(*Server, *discordgo.InteractionCreate)
 
 type Server struct {
 	VoiceChat    *voice.Connection
@@ -22,18 +24,30 @@ type Server struct {
 	interactions map[string]InteractionFunc
 	GuildID      string
 	db           *redis.Client
+	Logger       *log.Logger
 }
 
 func New(s *discordgo.Session, iMap map[string]InteractionFunc, id string, db *redis.Client, r ResponseFunc) *Server {
+	var logger *log.Logger
+	if config.Logs != "" {
+		file, err := os.Create(config.Logs + id)
+		if err != nil {
+			logger = log.New(os.Stdout, "", log.LstdFlags)
+		} else {
+			logger = log.New(file, "", log.LstdFlags)
+		}
+	} else {
+		logger = log.New(os.Stdout, "", log.LstdFlags)
+	}
 	server := &Server{
 		Interactions: make(chan *discordgo.InteractionCreate, 10),
 		Session:      s,
 		interactions: iMap,
 		GuildID:      id,
 		db:           db,
+		Logger:       logger,
 	}
 	go server.Run(r)
-
 	return server
 }
 
@@ -41,7 +55,7 @@ func (server *Server) Run(initResp ResponseFunc) {
 	defer func() {
 		err := recover()
 		if err != nil {
-			log.Printf("panic recovered: %v", err)
+			server.Logger.Printf("panic recovered: %v", err)
 			server.Run(initResp)
 		}
 	}()
@@ -66,14 +80,14 @@ func (server *Server) Run(initResp ResponseFunc) {
 			}
 		}
 		if handler, ok := server.interactions[name]; ok {
-			go initResp(server.Session, interaction)
+			go initResp(server, interaction)
 			if interaction.Type == discordgo.InteractionApplicationCommandAutocomplete {
 				go server.Handle(handler, interaction, name)
 			} else {
 				server.Handle(handler, interaction, name)
 			}
 		} else {
-			log.Printf("Error: no such command: %s", name)
+			server.Logger.Printf("Error: no such command: %s", name)
 		}
 	}
 }
@@ -89,7 +103,7 @@ func (server *Server) Handle(handler InteractionFunc, interaction *discordgo.Int
 			logErr = err
 			userErr = errors.New("internal error")
 		}
-		log.Printf(
+		server.Logger.Printf(
 			"Error executing interaction (%s %s): %s",
 			name,
 			interaction.Type.String(),
@@ -111,24 +125,6 @@ func (server *Server) Handle(handler InteractionFunc, interaction *discordgo.Int
 					},
 				},
 			})
-		}
-	}
-}
-
-func (server *Server) Stop() {
-	if server.VoiceChat != nil {
-		server.VoiceChat.Queue.Clear()
-		server.VoiceChat.Mutex.Lock()
-		if server.VoiceChat.NowPlaying != nil {
-			server.VoiceChat.NowPlaying.EncodeSession.Cleanup()
-		}
-		server.VoiceChat.Mutex.Unlock()
-		err := server.VoiceChat.VoiceConnection.Disconnect()
-		if err != nil {
-			log.Printf("Couldn't disconnect from voice chat (id: %s, guild: %s)",
-				server.VoiceChat.VoiceConnection.ChannelID,
-				server.VoiceChat.VoiceConnection.GuildID,
-			)
 		}
 	}
 }

@@ -27,6 +27,8 @@ type Connection struct {
 	ForceStop func(playbackText string)
 	Leave     context.CancelFunc // Cancels main context of voice conn
 	Mutex     *sync.RWMutex      // Mutex for fields: NowPlaying, Loop, playbackContext, ForceStop
+
+	Logger *log.Logger
 }
 
 func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.Session, updateTimer chan<- struct{}) {
@@ -35,7 +37,7 @@ func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.S
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Leave signal (channel: %s, guild: %s)", voiceChat.VoiceConnection.GuildID, voiceChat.VoiceConnection.GuildID)
+			voiceChat.Logger.Printf("Leave signal (channel: %s, guild: %s)", voiceChat.VoiceConnection.GuildID, voiceChat.VoiceConnection.GuildID)
 			return
 		case <-voiceChat.Queue.NewHandled:
 			song := voiceChat.Queue.ReadHandled()
@@ -43,7 +45,7 @@ func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.S
 				continue
 			}
 			if song.FileUrl == "" {
-				log.Printf("couldn't play song: %+v:", song)
+				voiceChat.Logger.Printf("couldn't play song: %+v:", song)
 				voiceChat.SendErrorPlaybackMessage(session, *song)
 				continue
 			}
@@ -73,10 +75,9 @@ func (voiceChat *Connection) PlaySongs(ctx context.Context, session *discordgo.S
 			}
 			voiceChat.Mutex.Unlock()
 			//log.Printf("Playing song %s (%s)", song.Title, song.FileUrl)
-			log.Printf("Playing song %s", song.Title)
 			err := voiceChat.playSong(voiceChat.playbackContext, session, song)
 			if err != nil {
-				log.Printf("Error playing song: %s", err.Error())
+				voiceChat.Logger.Printf("Error playing song: %s", err.Error())
 			}
 			updateTimer <- struct{}{}
 		}
@@ -163,13 +164,15 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 		return errors.Errorf("couldn't send playback message: %v", err)
 	}
 
+	voiceChat.Logger.Printf("Playing song %s", song.Title)
+
 	select {
 	case err = <-done:
 		if err != nil && err != io.EOF {
-			log.Printf("error while streaming (song %s): %v", song.Title, err)
+			voiceChat.Logger.Printf("error while streaming (song %s): %v", song.Title, err)
 		}
 	case <-playContext.Done():
-		log.Printf("Skipped %s", song.Title)
+		voiceChat.Logger.Printf("Skipped %s", song.Title)
 		voiceChat.Mutex.RLock()
 		if voiceChat.Loop == 2 {
 			voiceChat.Mutex.RUnlock()
@@ -180,7 +183,7 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 		return nil
 	}
 	voiceChat.NowPlaying.Skip("")
-	log.Printf("End of song %s", song.Title)
+	voiceChat.Logger.Printf("End of song %s", song.Title)
 	voiceChat.Mutex.RLock()
 	if voiceChat.Loop == 2 {
 		voiceChat.Mutex.RUnlock()
@@ -428,6 +431,6 @@ func (voiceChat *Connection) SendErrorPlaybackMessage(session *discordgo.Session
 		},
 	)
 	if err != nil {
-		log.Printf("Couldn't send error playback message: %v", err)
+		voiceChat.Logger.Printf("Couldn't send error playback message: %v", err)
 	}
 }

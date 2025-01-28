@@ -110,6 +110,19 @@ func Init(cfg config.Config, db *redis.Client, respFunc servers.ResponseFunc) *D
 		}
 	})
 
+	session.AddHandler(func(session *discordgo.Session, update *discordgo.VoiceStateUpdate) {
+		if update.UserID != session.State.User.ID {
+			return
+		}
+		if update.ChannelID == "" { // Disconnected
+			bot.servers.Mutex.RLock()
+			defer bot.servers.Mutex.RUnlock()
+			if serv, ok := bot.servers.Data[update.GuildID]; ok {
+				_ = serv.TryLeaveVoiceChat()
+			}
+		}
+	})
+
 	return bot
 }
 
@@ -128,7 +141,10 @@ func (bot *DiscordBot) Run() {
 func (bot *DiscordBot) Stop() {
 	bot.servers.Mutex.Lock()
 	for _, server := range bot.servers.Data {
-		server.Stop()
+		err := server.TryLeaveVoiceChat()
+		if err != nil {
+			log.Printf("Error leaving voice chat (guild: %s): %v", server.GuildID, err)
+		}
 	}
 	bot.servers.Mutex.Unlock()
 	bot.Session.Close()

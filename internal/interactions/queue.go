@@ -6,7 +6,6 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers/voice"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-faster/errors"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -21,10 +20,10 @@ func QueueInteraction(server *servers.Server, interaction *discordgo.Interaction
 			return err
 		}
 		if len(queue) == 0 {
-			responseToInteraction(server.Session, interaction, "📻  playback queue is empty  📻")
+			responseToInteraction(server, interaction, "📻  playback queue is empty  📻")
 			return nil
 		}
-		respWithQueuePage(server.Session, interaction, queue, 0)
+		respWithQueuePage(server, interaction, queue, 0)
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
@@ -42,7 +41,7 @@ func QueueNextInteraction(server *servers.Server, interaction *discordgo.Interac
 		if err != nil {
 			return err
 		}
-		respWithQueuePage(server.Session, interaction, queue, page+1)
+		respWithQueuePage(server, interaction, queue, page+1)
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
@@ -60,7 +59,7 @@ func QueuePrevInteraction(server *servers.Server, interaction *discordgo.Interac
 		if err != nil {
 			return err
 		}
-		respWithQueuePage(server.Session, interaction, queue, page-1)
+		respWithQueuePage(server, interaction, queue, page-1)
 		return nil
 	default:
 		return errors.Errorf("unknown interaction type: %s", interaction.Type.String())
@@ -85,15 +84,15 @@ func getPage(interaction *discordgo.InteractionCreate) (int, error) {
 	return firstIdx / PAGE_SIZE, nil
 }
 
-func respWithQueuePage(session *discordgo.Session, inter *discordgo.InteractionCreate, queue []string, page int) {
+func respWithQueuePage(server *servers.Server, inter *discordgo.InteractionCreate, queue []string, page int) {
 	if page < 0 {
 		return
 	}
 	if len(queue) <= (page)*PAGE_SIZE {
 		if len(queue) == 0 {
-			responseToInteraction(session, inter, "📻  playback queue is empty  📻")
+			responseToInteraction(server, inter, "📻  playback queue is empty  📻")
 		} else {
-			respWithQueuePage(session, inter, queue, (len(queue)-1)/PAGE_SIZE)
+			respWithQueuePage(server, inter, queue, (len(queue)-1)/PAGE_SIZE)
 		}
 		return
 	}
@@ -104,10 +103,10 @@ func respWithQueuePage(session *discordgo.Session, inter *discordgo.InteractionC
 		resp = append(resp, fmt.Sprintf("%d. %s", i+1, queue[i]))
 	}
 	resp = append(resp, fmt.Sprintf("page - %d/%d", page+1, (len(queue)-1)/PAGE_SIZE+1))
-	respToQueueInter(session, inter, page > 0, len(queue) > (page+1)*PAGE_SIZE, resp...)
+	respToQueueInter(server, inter, page > 0, len(queue) > (page+1)*PAGE_SIZE, resp...)
 }
 
-func respToQueueInter(sess *discordgo.Session, inter *discordgo.InteractionCreate, prev, next bool, elems ...string) {
+func respToQueueInter(server *servers.Server, inter *discordgo.InteractionCreate, prev, next bool, elems ...string) {
 	if len(elems) == 0 {
 		return
 	}
@@ -124,7 +123,7 @@ func respToQueueInter(sess *discordgo.Session, inter *discordgo.InteractionCreat
 	rawComps := make([]string, 0, 2)
 	if prev {
 		rawComps = append(rawComps, `{
-          "custom_id": "`+sess.State.SessionID+`:queueprev",
+          "custom_id": "`+server.Session.State.SessionID+`:queueprev",
           "type": 2,
           "style": 2,
           "label": "prev page"
@@ -132,7 +131,7 @@ func respToQueueInter(sess *discordgo.Session, inter *discordgo.InteractionCreat
 	}
 	if next {
 		rawComps = append(rawComps, `{
-          "custom_id": "`+sess.State.SessionID+`:queuenext",
+          "custom_id": "`+server.Session.State.SessionID+`:queuenext",
           "type": 2,
           "style": 2,
           "label": "next page"
@@ -143,13 +142,13 @@ func respToQueueInter(sess *discordgo.Session, inter *discordgo.InteractionCreat
 	if len(rawComps) > 0 {
 		line, err := discordgo.MessageComponentFromJSON(voice.ConstructJsonLine(rawComps...))
 		if err != nil {
-			log.Printf("failed to construct json line to respond to load queue page: %v", err)
+			server.Logger.Printf("failed to construct json line to respond to load queue page: %v", err)
 			return
 		}
 		components = append(components, line)
 	}
 
-	_, err := sess.InteractionResponseEdit(inter.Interaction, &discordgo.WebhookEdit{
+	_, err := server.Session.InteractionResponseEdit(inter.Interaction, &discordgo.WebhookEdit{
 		Embeds: &[]*discordgo.MessageEmbed{
 			{
 				Author: &discordgo.MessageEmbedAuthor{
@@ -166,7 +165,7 @@ func respToQueueInter(sess *discordgo.Session, inter *discordgo.InteractionCreat
 		Components: &components,
 	})
 	if err != nil {
-		log.Printf("Failed to respond to queue interaction: %v", err)
+		server.Logger.Printf("Failed to respond to queue interaction: %v", err)
 	}
 }
 
@@ -179,7 +178,7 @@ func NowPlayingInteraction(server *servers.Server, interaction *discordgo.Intera
 		}
 		if song != nil {
 			responseToInteraction(
-				server.Session,
+				server,
 				interaction,
 				"📻  now playing  📻",
 				fmt.Sprintf(
@@ -195,7 +194,7 @@ func NowPlayingInteraction(server *servers.Server, interaction *discordgo.Intera
 				song.ThumbnailUrl,
 			)
 		} else {
-			responseToInteraction(server.Session, interaction, "🔇  nothing is playing  🔇")
+			responseToInteraction(server, interaction, "🔇  nothing is playing  🔇")
 		}
 		return nil
 	default:

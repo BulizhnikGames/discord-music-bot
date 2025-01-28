@@ -64,9 +64,9 @@ func GetMetadata(query, guildID string, tryCookies bool) (*internal.Song, error)
 		cmd = exec.Command(commandPath, cookiesArgs...)
 	} else {
 		cmd = exec.Command(commandPath, args...)
-	}
-	log.Println(strings.Join(cmd.Args, " "))*/
+	}*/
 	cmd := exec.Command(commandPath, args...)
+	//log.Println(strings.Join(cmd.Args, " "))
 	if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
 		// Try cookies only if this try was without them
 		/*if err.Error() == "exit status 1" && !tryCookies && config.Cookies != "" && canUseCookies(guildID) {
@@ -79,6 +79,7 @@ func GetMetadata(query, guildID string, tryCookies bool) (*internal.Song, error)
 		if err != nil {
 			return nil, errors.Errorf("failed to unmarshal video metadata (query %s): %v", query, err)
 		}
+		//log.Printf("%s -> %s", query, videoMetadata.Title)
 		return &internal.Song{
 			Title:        videoMetadata.Title,
 			Author:       videoMetadata.Uploader,

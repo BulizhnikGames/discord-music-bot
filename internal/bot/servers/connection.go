@@ -5,7 +5,6 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal"
 	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers/voice"
 	"github.com/BulizhnikGames/discord-music-bot/internal/errors"
-	"log"
 	"sync"
 	"time"
 )
@@ -44,6 +43,7 @@ func (server *Server) JoinVoiceChat(guildID, voiceChannel, textChannel string) (
 		Queue:           queue,
 		TextChannel:     textChannel,
 		Mutex:           &sync.RWMutex{},
+		Logger:          server.Logger,
 		Cache: internal.AsyncMap[string, *internal.SongCache]{
 			Data:  make(map[string]*internal.SongCache),
 			Mutex: &sync.RWMutex{},
@@ -64,9 +64,9 @@ func (server *Server) LeaveAfterTimeout(updateTimer <-chan struct{}) {
 	for {
 		select {
 		case <-timer.C:
-			err := server.LeaveVoiceChat()
+			err := server.TryLeaveVoiceChat()
 			if err != nil {
-				log.Printf("Couldn't leave voice chat after reaching timeout: %v", err)
+				server.Logger.Printf("Couldn't leave voice chat after reaching timeout: %v", err)
 			}
 			return
 		case <-updateTimer:
@@ -75,12 +75,29 @@ func (server *Server) LeaveAfterTimeout(updateTimer <-chan struct{}) {
 	}
 }
 
+// TryLeaveVoiceChat leaves voice chat if connected
+func (server *Server) TryLeaveVoiceChat() error {
+	if server.VoiceChat != nil {
+		return server.LeaveVoiceChat()
+	}
+	return nil
+}
+
+// LeaveVoiceChat leaves voice chat if connected, otherwise throws error
 func (server *Server) LeaveVoiceChat() error {
 	if server.VoiceChat != nil {
 		err := server.ClearQueue("⛔  left voice channel  ⛔")
 		if err != nil {
 			return err
 		}
+
+		server.VoiceChat.Mutex.Lock()
+		if server.VoiceChat.NowPlaying != nil {
+			server.VoiceChat.NowPlaying.EncodeSession.Cleanup()
+		}
+		server.VoiceChat.Mutex.Unlock()
+
+		server.VoiceChat.Leave()
 
 		err = server.VoiceChat.VoiceConnection.Disconnect()
 		if err != nil {
@@ -89,6 +106,7 @@ func (server *Server) LeaveVoiceChat() error {
 
 		server.VoiceChat = nil
 
+		server.Logger.Printf("Left voice chat (guild ID: %s)", server.GuildID)
 		return nil
 	} else {
 		return errors.New("bot isn't in the voice chat")

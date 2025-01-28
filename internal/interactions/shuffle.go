@@ -13,7 +13,7 @@ func ShuffleInteraction(server *servers.Server, interaction *discordgo.Interacti
 		if err != nil {
 			return err
 		}
-		responseToInteraction(server.Session, interaction, "🔀  shuffled  🔀")
+		responseToInteraction(server, interaction, "🔀  shuffled  🔀")
 		return nil
 	case discordgo.InteractionMessageComponent:
 		err := server.ShuffleQueue()

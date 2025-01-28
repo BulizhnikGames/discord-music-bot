@@ -29,6 +29,8 @@ APP_ID=<application id вашего бота>
 
 TOOLS_PATH=<папка, где будут расположены ffmpeg и yd-dlp (оставьте пустым, если ffmpeg и yt-dlp находятся в PATH)>
 
+LOGS_PATH=<папка, где будут храниться логи серверов (если оставить пустым, то будут выводиться в StdOut)>
+
 #Настройка redis (если не нужен DJ mode, можно оставить пустыми)
 DB_URL=
 DB_ID=
@@ -65,6 +67,8 @@ BOT_TOKEN=<token of your bot>
 APP_ID=<application id of your bot>
 
 TOOLS_PATH=<path to the folder with ffmpeg and yt-dlp (leave empty if ffmpeg and yt-dlp are located in PATH)>
+
+LOGS_PATH=<path to folder with logs from servers (if you leave this variable empty, logs will be printed in StdOut)>
 
 #Redis configuration (if you don't need DJ mode, leave empty)
 DB_URL=

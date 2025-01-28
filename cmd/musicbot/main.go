@@ -7,7 +7,6 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/config"
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions"
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions/middleware"
-	"github.com/BulizhnikGames/discord-music-bot/internal/youtube"
 	"github.com/redis/go-redis/v9"
 	"os"
 	"os/signal"
@@ -45,7 +44,10 @@ func main() {
 		"play",
 		middleware.DJOrAdminOnly(
 			middleware.ActiveChannelOnly(
-				interactions.PlayInteraction(youtube.Search),
+				//interactions.PlayInteraction(youtube.Search), temporarily off
+				interactions.PlayInteraction(func(query string, cnt int) ([]string, []string, error) {
+					return nil, nil, nil
+				}),
 				false,
 			),
 		),

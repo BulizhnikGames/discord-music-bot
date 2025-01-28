@@ -1,13 +1,13 @@
 package interactions
 
 import (
+	"github.com/BulizhnikGames/discord-music-bot/internal/bot/servers"
 	"github.com/bwmarrin/discordgo"
-	"log"
 )
 
-func InitialResponse(session *discordgo.Session, interaction *discordgo.InteractionCreate) {
+func InitialResponse(server *servers.Server, interaction *discordgo.InteractionCreate) {
 	if interaction.Type == discordgo.InteractionApplicationCommand {
-		err := session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+		err := server.Session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
 			//Type: discordgo.InteractionResponseDeferredChannelMessageWithSource, // may be use this method
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -26,19 +26,19 @@ func InitialResponse(session *discordgo.Session, interaction *discordgo.Interact
 			},
 		})
 		if err != nil {
-			log.Printf("Failed to initialy respond to interaction: %v", err)
+			server.Logger.Printf("Failed to initialy respond to interaction: %v", err)
 		}
 	} else if interaction.Type == discordgo.InteractionMessageComponent {
-		err := session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
+		err := server.Session.InteractionRespond(interaction.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseDeferredMessageUpdate,
 		})
 		if err != nil {
-			log.Printf("Failed to initialy respond to interaction: %v", err)
+			server.Logger.Printf("Failed to initialy respond to interaction: %v", err)
 		}
 	}
 }
 
-func responseToInteraction(session *discordgo.Session, interaction *discordgo.InteractionCreate, elems ...string) {
+func responseToInteraction(server *servers.Server, interaction *discordgo.InteractionCreate, elems ...string) {
 	for len(elems) < 5 {
 		elems = append(elems, "")
 	}
@@ -47,7 +47,7 @@ func responseToInteraction(session *discordgo.Session, interaction *discordgo.In
 		fields = append(fields, &discordgo.MessageEmbedField{Name: elems[3]})
 	}
 
-	_, err := session.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
+	_, err := server.Session.InteractionResponseEdit(interaction.Interaction, &discordgo.WebhookEdit{
 		Embeds: &[]*discordgo.MessageEmbed{
 			{
 				Author: &discordgo.MessageEmbedAuthor{
@@ -69,6 +69,6 @@ func responseToInteraction(session *discordgo.Session, interaction *discordgo.In
 		//Components: &[]discordgo.MessageComponent{},
 	})
 	if err != nil {
-		log.Printf("Failed to respond to interaction (with text %s): %v", elems[0], err)
+		server.Logger.Printf("Failed to respond to interaction (with text %s): %v", elems[0], err)
 	}
 }

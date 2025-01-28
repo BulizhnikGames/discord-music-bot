@@ -13,7 +13,7 @@ func SkipInteraction(server *servers.Server, interaction *discordgo.InteractionC
 		if err != nil {
 			return err
 		}
-		responseToInteraction(server.Session, interaction, "⏩ skipped")
+		responseToInteraction(server, interaction, "⏩ skipped")
 		return nil
 	case discordgo.InteractionMessageComponent:
 		return server.SkipSong("⏩ skipped")

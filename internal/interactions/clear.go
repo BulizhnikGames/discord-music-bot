@@ -13,7 +13,7 @@ func ClearInteraction(server *servers.Server, interaction *discordgo.Interaction
 		if err != nil {
 			return err
 		}
-		responseToInteraction(server.Session, interaction, "⏹️  queue cleared  ⏹️")
+		responseToInteraction(server, interaction, "⏹️  queue cleared  ⏹️")
 		return nil
 	case discordgo.InteractionMessageComponent:
 		return server.ClearQueue("⏹️  queue cleared  ⏹️")

@@ -16,13 +16,13 @@ func LoopInteraction(server *servers.Server, interaction *discordgo.InteractionC
 		}
 		switch loop {
 		case 0:
-			responseToInteraction(server.Session, interaction, "↪️  looping disabled  ↪️")
+			responseToInteraction(server, interaction, "↪️  looping disabled  ↪️")
 		case 1:
-			responseToInteraction(server.Session, interaction, "🔁  looping over queue  🔁")
+			responseToInteraction(server, interaction, "🔁  looping over queue  🔁")
 		case 2:
-			responseToInteraction(server.Session, interaction, "🔂  looping over song  🔂")
+			responseToInteraction(server, interaction, "🔂  looping over song  🔂")
 		default:
-			responseToInteraction(server.Session, interaction, "↪️  looping disabled  ↪️")
+			responseToInteraction(server, interaction, "↪️  looping disabled  ↪️")
 		}
 		go server.TryRegenPlaybackMessage()
 		return nil

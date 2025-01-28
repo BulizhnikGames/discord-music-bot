@@ -14,7 +14,7 @@ func PauseInteraction(server *servers.Server, interaction *discordgo.Interaction
 			return err
 		}
 		go server.TryRegenPlaybackMessage()
-		responseToInteraction(server.Session, interaction, "⏸️  playback paused  ⏸️")
+		responseToInteraction(server, interaction, "⏸️  playback paused  ⏸️")
 		return nil
 	case discordgo.InteractionMessageComponent:
 		err := server.Pause(true)
@@ -36,7 +36,7 @@ func ResumeInteraction(server *servers.Server, interaction *discordgo.Interactio
 			return err
 		}
 		go server.TryRegenPlaybackMessage()
-		responseToInteraction(server.Session, interaction, "▶️  playback resumed  ▶️")
+		responseToInteraction(server, interaction, "▶️  playback resumed  ▶️")
 		return nil
 	case discordgo.InteractionMessageComponent:
 		err := server.Pause(false)

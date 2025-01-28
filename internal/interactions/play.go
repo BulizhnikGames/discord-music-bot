@@ -97,7 +97,7 @@ func play(server *servers.Server, interaction *discordgo.InteractionCreate) erro
 			song.Duration%60,
 		)
 		responseToInteraction(
-			server.Session,
+			server,
 			interaction,
 			"✅  added to queue  ✅",
 			title,
@@ -112,7 +112,7 @@ func play(server *servers.Server, interaction *discordgo.InteractionCreate) erro
 		}
 		if len(playlist.Videos[0].Thumbnails) == 0 {
 			responseToInteraction(
-				server.Session,
+				server,
 				interaction,
 				"✅  added to queue  ✅",
 				title,
@@ -121,7 +121,7 @@ func play(server *servers.Server, interaction *discordgo.InteractionCreate) erro
 			)
 		} else {
 			responseToInteraction(
-				server.Session,
+				server,
 				interaction,
 				"✅  added to queue  ✅",
 				title,
