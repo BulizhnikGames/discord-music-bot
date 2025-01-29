@@ -62,6 +62,8 @@ func LoadConfig() Config {
 		Logs = Logs + "/"
 	}
 
+	log.Printf("Logging path: <%s>", Logs)
+
 	cfg.Redis.Url = os.Getenv("DB_URL")
 	if cfg.Redis.Url == "" {
 		log.Fatal("Redis url not found in .env")

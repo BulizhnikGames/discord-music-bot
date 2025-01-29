@@ -111,14 +111,17 @@ func Init(cfg config.Config, db *redis.Client, respFunc servers.ResponseFunc) *D
 	})
 
 	session.AddHandler(func(session *discordgo.Session, update *discordgo.VoiceStateUpdate) {
-		if update.UserID != session.State.User.ID {
+		if update.Member.User.ID != session.State.User.ID {
 			return
 		}
 		if update.ChannelID == "" { // Disconnected
 			bot.servers.Mutex.RLock()
-			defer bot.servers.Mutex.RUnlock()
 			if serv, ok := bot.servers.Data[update.GuildID]; ok {
+				bot.servers.Mutex.RUnlock()
+				serv.Logger.Printf("Force left by update: %+v", update)
 				serv.HandleLeave()
+			} else {
+				bot.servers.Mutex.RUnlock()
 			}
 		}
 	})

@@ -30,8 +30,9 @@ type Server struct {
 func New(s *discordgo.Session, iMap map[string]InteractionFunc, id string, db *redis.Client, r ResponseFunc) *Server {
 	var logger *log.Logger
 	if config.Logs != "" {
-		file, err := os.Create(config.Logs + id)
+		file, err := os.Create(config.Logs + id + ".txt")
 		if err != nil {
+			log.Printf("Error creating log file: %v", err)
 			logger = log.New(os.Stdout, "", log.LstdFlags)
 		} else {
 			logger = log.New(file, "", log.LstdFlags)

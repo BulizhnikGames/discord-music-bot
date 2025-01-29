@@ -99,10 +99,7 @@ func (server *Server) LeaveVoiceChat() error {
 
 		server.VoiceChat.Leave()
 
-		err = server.VoiceChat.VoiceConnection.Disconnect()
-		if err != nil {
-			return err
-		}
+		_ = server.VoiceChat.VoiceConnection.Disconnect()
 
 		server.VoiceChat = nil
 
@@ -114,17 +111,19 @@ func (server *Server) LeaveVoiceChat() error {
 }
 
 func (server *Server) HandleLeave() {
-	_ = server.ClearQueue("⛔  left voice channel  ⛔")
+	if server.VoiceChat != nil {
+		_ = server.ClearQueue("⛔  left voice channel  ⛔")
 
-	server.VoiceChat.Mutex.Lock()
-	if server.VoiceChat.NowPlaying != nil {
-		server.VoiceChat.NowPlaying.EncodeSession.Cleanup()
+		server.VoiceChat.Mutex.Lock()
+		if server.VoiceChat.NowPlaying != nil {
+			server.VoiceChat.NowPlaying.EncodeSession.Cleanup()
+		}
+		server.VoiceChat.Mutex.Unlock()
+
+		server.VoiceChat.Leave()
+
+		server.VoiceChat = nil
+
+		server.Logger.Printf("Handled leave voice chat (guild ID: %s)", server.GuildID)
 	}
-	server.VoiceChat.Mutex.Unlock()
-
-	server.VoiceChat.Leave()
-
-	server.VoiceChat = nil
-
-	server.Logger.Printf("Left voice chat (guild ID: %s)", server.GuildID)
 }
