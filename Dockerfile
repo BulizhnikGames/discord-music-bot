@@ -6,8 +6,8 @@ COPY go.* ./
 
 RUN go mod download
 
-COPY .env cmd internal tools ./
+COPY . .
 
-RUN go build -o discordbot cmd/musicbot/main.go
+RUN go build -o discordbot ./cmd/musicbot/main.go
 
 CMD [ "./discordbot" ]

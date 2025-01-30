@@ -1,0 +1,11 @@
+.gitignore
+.dockerignore
+.idea
+.git
+
+Dockerfile
+README.md
+logs
+
+musicbot.exe
+discordbot
