@@ -20,10 +20,10 @@ func main() {
 	cfg := config.LoadConfig()
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Url,
+		Addr:     fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
 		Username: cfg.Redis.Username,
 		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DBid,
+		DB:       cfg.Redis.DB,
 	})
 
 	discordBot := bot.Init(cfg, redisClient, interactions.InitialResponse)
