@@ -1,10 +1,6 @@
-FROM golang:1.23.2-ubuntu
-
-ARG LOGS_PATH
+FROM golang:1.23.2-alpine
 
 WORKDIR /app
-
-RUN mkdir -p "$LOGS_PATH"
 
 COPY go.* ./
 

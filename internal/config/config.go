@@ -58,11 +58,16 @@ func LoadConfig() Config {
 	}
 
 	Logs = os.Getenv("LOGS_PATH")
-	if len(Logs) > 0 && Logs[len(Logs)-1] != '/' {
-		Logs = Logs + "/"
+	if len(Logs) > 0 {
+		if Logs[len(Logs)-1] != '/' {
+			Logs = Logs + "/"
+		}
+		if err = os.MkdirAll(Logs, 0755); err == nil {
+			log.Printf("Logging path: <%s>", Logs)
+		} else {
+			log.Fatalf("Couldn't create logging dir: %v", err)
+		}
 	}
-
-	log.Printf("Logging path: <%s>", Logs)
 
 	cfg.Redis.Url = os.Getenv("DB_URL")
 	if cfg.Redis.Url == "" {
