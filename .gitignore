@@ -1,6 +1,7 @@
 .env
 .idea
-tools
+
+logs
+
 musicbot.exe
 discordbot
-logs

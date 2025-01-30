@@ -1,17 +1,13 @@
-FROM golang:1.23.2-ubuntu
-
-ARG LOGS_PATH
+FROM golang:1.23.2-bullseye
 
 WORKDIR /app
 
-RUN mkdir -p "$LOGS_PATH"
+RUN apt-get update && apt-get install -y --no-install-recommends python3 && rm -rf /var/lib/apt/lists/*
 
-COPY go.* ./
-
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY .env cmd internal tools ./
+COPY . .
+RUN go build -o discordbot ./cmd/musicbot/main.go
 
-RUN go build -o discordbot cmd/musicbot/main.go
-
-CMD [ "./discordbot" ]
+CMD ["./discordbot"]

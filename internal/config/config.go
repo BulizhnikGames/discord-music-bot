@@ -21,10 +21,11 @@ var (
 //var CookiesGuildID string
 
 type RedisConfig struct {
-	Url      string
-	DBid     int
+	Host     string
+	Port     string
 	Username string
 	Password string
+	DB       int
 }
 
 type Config struct {
@@ -58,27 +59,37 @@ func LoadConfig() Config {
 	}
 
 	Logs = os.Getenv("LOGS_PATH")
-	if len(Logs) > 0 && Logs[len(Logs)-1] != '/' {
-		Logs = Logs + "/"
+	if len(Logs) > 0 {
+		if Logs[len(Logs)-1] != '/' {
+			Logs = Logs + "/"
+		}
+		if err = os.MkdirAll(Logs, 0755); err == nil {
+			log.Printf("Logging path: <%s>", Logs)
+		} else {
+			log.Fatalf("Couldn't create logging dir: %v", err)
+		}
 	}
 
-	log.Printf("Logging path: <%s>", Logs)
-
-	cfg.Redis.Url = os.Getenv("DB_URL")
-	if cfg.Redis.Url == "" {
-		log.Fatal("Redis url not found in .env")
+	cfg.Redis.Host = os.Getenv("REDIS_HOST")
+	if cfg.Redis.Host == "" {
+		log.Printf("Redis host not found")
 	}
 
-	dbIDStr := os.Getenv("DB_ID")
+	cfg.Redis.Port = os.Getenv("REDIS_PORT")
+	if cfg.Redis.Port == "" {
+		log.Printf("Redis port not found")
+	}
+
+	dbIDStr := os.Getenv("REDIS_DB_ID")
 	if dbIDStr == "" {
-		log.Fatal("Redis db id not found in .env")
+		dbIDStr = "0"
 	}
-	if cfg.Redis.DBid, err = strconv.Atoi(dbIDStr); err != nil {
+	if cfg.Redis.DB, err = strconv.Atoi(dbIDStr); err != nil {
 		log.Fatalf("Error parsing redis db id to int: %v", err)
 	}
 
-	cfg.Redis.Username = os.Getenv("DB_USERNAME")
-	cfg.Redis.Password = os.Getenv("DB_PASSWORD")
+	cfg.Redis.Username = os.Getenv("REDIS_USERNAME")
+	cfg.Redis.Password = os.Getenv("REDIS_PASSWORD")
 
 	//Cookies = os.Getenv("COOKIES")
 	//CookiesGuildID = os.Getenv("COOKIES_GUILD_ID")

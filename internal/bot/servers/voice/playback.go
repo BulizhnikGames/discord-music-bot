@@ -173,9 +173,9 @@ func (voiceChat *Connection) playSong(ctx context.Context, session *discordgo.Se
 			voiceChat.Logger.Printf("Couldn't stream (song %s): %v", song.Title, err)
 			voiceChat.NowPlaying.Skip("💢  couldn't stream song  💢")
 		} else {
+			voiceChat.Logger.Printf("End of song %s", song.Title)
 			voiceChat.NowPlaying.Skip("")
 		}
-		voiceChat.Logger.Printf("End of song %s", song.Title)
 		voiceChat.Mutex.RLock()
 		if voiceChat.Loop == 2 {
 			voiceChat.Mutex.RUnlock()
