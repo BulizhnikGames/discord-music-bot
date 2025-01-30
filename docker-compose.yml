@@ -11,6 +11,8 @@ services:
       - REDIS_USERNAME=
       - REDIS_PASSWORD=
       - REDIS_DB_ID=0
+      - LOGS_PATH=./logs/
+      - TOOLS_PATH=./tools/
 
   redis:
     image: redis:7-alpine

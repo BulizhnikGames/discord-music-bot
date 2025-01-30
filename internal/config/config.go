@@ -72,12 +72,12 @@ func LoadConfig() Config {
 
 	cfg.Redis.Host = os.Getenv("REDIS_HOST")
 	if cfg.Redis.Host == "" {
-		log.Fatal("Redis host not found")
+		log.Printf("Redis host not found")
 	}
 
 	cfg.Redis.Port = os.Getenv("REDIS_PORT")
 	if cfg.Redis.Port == "" {
-		log.Fatal("Redis port not found")
+		log.Printf("Redis port not found")
 	}
 
 	dbIDStr := os.Getenv("REDIS_DB_ID")
