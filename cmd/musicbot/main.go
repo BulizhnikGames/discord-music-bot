@@ -8,6 +8,7 @@ import (
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions"
 	"github.com/BulizhnikGames/discord-music-bot/internal/interactions/middleware"
 	"github.com/redis/go-redis/v9"
+	"log"
 	"os"
 	"os/signal"
 )
@@ -67,7 +68,7 @@ func main() {
 
 	go discordBot.Run()
 
-	fmt.Println("Bot is now running.")
+	log.Println("Bot is now running.")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
