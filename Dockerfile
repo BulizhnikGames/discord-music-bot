@@ -19,6 +19,8 @@ RUN /bin/sh -c set -eux && \
 
 COPY --from=build /app ./
 
+RUN chmod +x ./tools/*
+
 RUN rm -rf cmd internal go.mod go.sum
 
 CMD ["./discordbot"]
