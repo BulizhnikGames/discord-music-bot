@@ -13,9 +13,19 @@ services:
       - REDIS_DB_ID=0
       - LOGS_PATH=./logs/
       - TOOLS_PATH=./tools/
+    networks:
+      - internal
+      - external
 
   redis:
     image: redis:7-alpine
     container_name: redis
-    ports:
-      - "6379:6379"
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  external:
+    driver: bridge
