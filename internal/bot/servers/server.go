@@ -33,12 +33,12 @@ func New(s *discordgo.Session, iMap map[string]InteractionFunc, id string, db *r
 		file, err := os.Create(config.Logs + id + ".txt")
 		if err != nil {
 			log.Printf("Error creating log file: %v", err)
-			logger = log.New(os.Stdout, id, log.LstdFlags)
+			logger = log.New(os.Stdout, "[server "+id+"] ", log.LstdFlags)
 		} else {
 			logger = log.New(file, "", log.LstdFlags)
 		}
 	} else {
-		logger = log.New(os.Stdout, id, log.LstdFlags)
+		logger = log.New(os.Stdout, "[server "+id+"] ", log.LstdFlags)
 	}
 	server := &Server{
 		Interactions: make(chan *discordgo.InteractionCreate, 10),
